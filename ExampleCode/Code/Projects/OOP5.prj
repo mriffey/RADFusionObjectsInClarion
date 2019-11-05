@@ -1,0 +1,8 @@
+-- Example 5 - Derivation
+#noedit
+#system win32
+#model clarion dll
+#pragma debug(vid=>full)
+#pragma optimize(cpu=>386)
+#compile "oop5.clw"
+#link "oop5.exe"

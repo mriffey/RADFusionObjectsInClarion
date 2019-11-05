@@ -1,0 +1,8 @@
+-- Example 4 Contructors and Destructors
+#noedit
+#system win32
+#model clarion dll
+#pragma debug(vid=>full)
+#pragma optimize(cpu=>386)
+#compile "oop4.clw"
+#link "oop4.exe"

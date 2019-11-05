@@ -1,0 +1,8 @@
+-- The Pie and Interfaces
+#noedit
+#system win32
+#model clarion dll
+#pragma debug(vid=>full)
+#pragma optimize(cpu=>386)
+#compile "Ipie.clw"
+#link "ipie.exe"

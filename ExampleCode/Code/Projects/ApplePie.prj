@@ -1,0 +1,7 @@
+-- Applie Pie
+#noedit
+#system win32
+#model clarion dll
+#pragma debug(vid=>full)
+#compile "applepie.clw"
+#link "applepie.exe"

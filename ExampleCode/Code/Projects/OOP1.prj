@@ -1,0 +1,9 @@
+-- Example 1 - Declaring a CLASS
+#noedit
+#system win32
+#model clarion dll
+#pragma debug(vid=>full)
+#pragma optimize(cpu=>386)
+#pragma optimize(speed=>on)
+#compile "OOP1.clw"
+#link "oop1.exe"

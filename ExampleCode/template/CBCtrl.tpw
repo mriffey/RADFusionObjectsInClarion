@@ -1,0 +1,939 @@
+#CONTROL(RelationalTree,'Relational Tree Object List Box'),PRIMARY('Relational Tree Object List Box',OPTKEY),DESCRIPTION('Tree structure related to ' & %Primary),MULTI,WINDOW,WRAP(List)
+#BOXED('Default Tree prompts'),AT(0,0),WHERE(%False),HIDE
+  #INSERT (%OOPHiddenPrompts(ABC))
+#ENDBOXED
+#PREPARE                                                                        #!Set class name in case developers never edits the name
+  #COMMENT(%ColumnPos)                                                          #!Set target language comments to this column
+  #CALL(%ReadABCFiles(ABC))                                                     #!Read ABC class headers if needed
+  #CALL(%SetClassDefaults(ABC),'RTree' & %ActiveTemplateInstance,'RTree' & %ActiveTemplateInstance,'RelationTree')  #!Set local name from libsrc class name
+#ENDPREPARE                                                                     #! end #PREPARE
+#ATSTART                                                                        #!Execute this code before #CODE template generates its code
+  #CALL(%ReadABCFiles(ABC))                                                     #!Read ABC class headers if needed
+  #CALL(%SetClassDefaults(ABC),'RTree' & %ActiveTemplateInstance,'RTree' & %ActiveTemplateInstance,'RelationTree')   #!Set local name from libsrc class name
+  #EQUATE(%WindowManagerObject,%GetObjectName('Default',0))
+  #DECLARE(%IsFirstInstance)
+  #SET(%IsFirstInstance,(INLIST(%ActiveTemplate,%ActiveTemplate)=INSTANCE(%ActiveTemplate)) AND (INSTANCE(%ActiveTemplateInstance)=1))
+  #MESSAGE('Initializing Relational Object Tree',3)
+  #INSERT(%FileControlInitialize(ABC)),NOINDENT
+  #DECLARE(%DerivedInstance)
+  #DECLARE(%InstancePrefix)
+  #DECLARE(%TreeQueue)
+  #DECLARE(%LoadedQueue)
+  #DECLARE(%TreeControl)
+  #DECLARE(%TempLevel)
+  #DECLARE(%TempParent)
+  #DECLARE(%TempParentKey)
+  #DECLARE(%InsertPopupText)
+  #DECLARE(%ChangePopupText)
+  #DECLARE(%DeletePopupText)
+  #DECLARE(%ExpandPopupText)
+  #DECLARE(%ContractPopupText)
+  #DECLARE(%QueueField),MULTI                                                   #!For construction of view
+  #DECLARE(%QueueFieldAssignment,%QueueField)
+  #DECLARE(%QueueFieldComment,%QueueField)
+  #DECLARE(%ListView)                                                           #!The local VIEW label
+  #SET(%ListView,'TreeView' & %ActiveTemplateInstance)                          #!Instance name of VIEW
+  #DECLARE(%TreeLevelFile),MULTI
+  #DECLARE(%TreeLevel,%TreeLevelFile)
+  #DECLARE(%TreeChildFile,%TreeLevelFile)
+  #DECLARE(%TreeParentFile,%TreeLevelFile)
+  #DECLARE(%TreeParentKey,%TreeLevelFile)
+  #DECLARE(%TreeDisplay,%TreeLevelFile)
+  #DECLARE(%UpdatesPresent)
+  #DECLARE(%IconList),UNIQUE
+  #DECLARE(%IconListType,%IconList)
+  #FOR(%Control),WHERE(%ControlInstance = %ActiveTemplateInstance)
+    #SET(%TreeControl,%Control)
+    #SET(%TreeQueue,EXTRACT(%ControlStatement,'FROM',1))                        #!Get FROM attribute parameter, assign to %TreeQueue
+    #SET(%LoadedQueue,'LQ' & %ActiveTemplateInstance)
+  #ENDFOR
+  #SET(%InsertPopupText,'&Insert')
+  #SET(%ChangePopupText,'&Change')
+  #SET(%DeletePopupText,'&Delete')
+  #SET(%ExpandPopupText,'E&xpand All')
+  #SET(%ContractPopupText,'Co&ntract All')
+  #FIX(%Control,%TreeControl)
+  #FIX(%File,%Primary)
+  #ADD(%TreeLevelFile,%Primary)
+  #SET(%TreeLevel,1)
+  #SET(%TreeDisplay,%PrimaryDisplay)
+  #SET(%UpdatesPresent,%False)
+  #IF(%PrimaryUpdate)
+    #SET(%UpdatesPresent,%True)
+  #ENDIF
+  #IF(%ControlHasIcon)                                                          #!If icons are involved
+    #IF(%TreeTitleIcon)                                                         #!If there is a title icon
+      #INSERT(%AddBrowseIcon(ABC),%TreeTitleIcon)                               #!set icon type (built-in, etc)
+    #ENDIF                                                                      #! end #IF(%TreeTitleIcon)
+    #IF(%PrimaryDefaultIcon)                                                    #!If primary file uses an icon
+      #INSERT(%AddBrowseIcon(ABC),%PrimaryDefaultIcon)                          #!set icon type (built-in, etc)
+    #ENDIF                                                                      #! end #IF(%PrimaryDefaultIcon)
+    #FOR(%PrimaryConditionalIcons)                                              #!If primary file uses conditional icons
+      #INSERT(%AddBrowseIcon(ABC),%PrimaryConditionalIcon)                      #!set icon type (built-in, etc) for each icon found
+    #ENDFOR                                                                     #! end #FOR(%PrimaryConditionalIcons)
+  #ENDIF                                                                        #! end #IF(%ControlHasIcon)
+  #FOR(%Secondary),WHERE(%SecondaryType = 'MANY:1')                             #!For proper related files
+    #IF(%SecondaryUpdate)                                                       #!and if updatable
+      #SET(%UpdatesPresent,%True)                                               #!Set flag this is possible
+    #ENDIF                                                                      #! end #IF(%SecondaryUpdate)
+    #FIX(%TreeLevelFile,%SecondaryTo)                                           #!Set level file to parent file
+    #SET(%TreeChildFile,%Secondary)                                             #!Set child file to related child file of parent
+    #SET(%TempLevel,%TreeLevel + 1)
+    #FIX(%File,%Secondary)
+    #FIX(%Relation,%SecondaryTo)
+    #SET(%TempParent,%Relation)
+    #SET(%TempParentKey,%RelationKey)
+    #ADD(%TreeLevelFile,%Secondary)
+    #SET(%TreeLevel,%TempLevel)
+    #SET(%TreeParentFile,%TempParent)
+    #SET(%TreeParentKey,%TempParentKey)
+    #SET(%TreeDisplay,%SecondaryDisplay)
+    #IF(%ControlHasIcon)                                                        #!If icons are present
+      #IF(%SecondaryDefaultIcon)                                                #! and related files have icons
+        #INSERT(%AddBrowseIcon(ABC),%SecondaryDefaultIcon)                      #!set icon type (built-in, etc)
+      #ENDIF                                                                    #! end #IF(%SecondaryDefaultIcon)
+      #FOR(%SecondaryConditionalIcons)                                          #!for each related conditional icon
+        #INSERT(%AddBrowseIcon(ABC),%SecondaryConditionalIcon)                  #!set icon type (built-in, etc) for each icon found
+      #ENDFOR                                                                   #! end #FOR(%SecondaryConditionalIcons)
+    #ENDIF                                                                      #! end #IF(%ControlHasIcon)
+  #ENDFOR                                                                       #! end #FOR(%Secondary),WHERE(%SecondaryType = 'MANY:1')
+  #SET(%InstancePrefix,'RTree' & %ActiveTemplateInstance)                       #!Set instance prefix; RTree1, RTree2, etc
+  #SET(%DerivedInstance,%InstancePrefix & 'TB')                                 #!Set derived instance for toolbar control use
+#ENDAT                                                                          #! end #ATSTART
+#!-------------------------------------------------------------------------
+#AT(%BeforeGenerateApplication)                                                 #!For exporting the class
+  #CALL(%AddCategory(ABC),'CB')                                                 #!The parameter in the !ABCIncludeFile comment in the INC file
+  #CALL(%SetCategoryLocation(ABC),'CB','CB')                                    #!Used for DLLMode_ and LinkMode_ pragmas (see defines tab in project editor)
+#ENDAT                                                                          #! end #AT(%BeforeGenerateApplication)
+#!-------------------------------------------------------------------------
+#TAB('&Setup Relation Tree')
+  #INSERT(%RelationTreeProperties)                                              #!Add the developer dialogs
+#ENDTAB
+#!-------------------------------------------------------------------------
+#TAB('Local &Objects')                                                          #!Local object dialog
+  #BUTTON('&Relation Tree Class'),AT(,,170)                                     #!Display a button
+    #WITH(%ClassItem,'RTree' & %ActiveTemplateInstance)                         #!Show the local relation tree instance name
+      #INSERT(%ClassPrompts(ABC))                                               #!Add the class prompt dialog.
+    #ENDWITH                                                                    #! end #WITH(%ClassItem,'RTree')
+  #ENDBUTTON                                                                    #! end #BUTTON('&Relation Tree')
+#ENDTAB                                                                         #! end #TAB('Local &Objects')
+#!-------------------------------------------------------------------------
+#TAB('C&lasses')                                                                #!Local class dialog
+  #PROMPT('&Tree default class:',FROM(%pClassName)),%ClassName,DEFAULT('RelationTree'),REQ
+  #DISPLAY()
+  #BOXED(' Usage ')
+    #DISPLAY()
+    #DISPLAY('If you have another class you wish to use instead, ')
+    #DISPLAY('select it from the list or use the default shown.')
+    #DISPLAY()
+  #ENDBOXED
+#ENDTAB                                                                         #! end #TAB('C&lasses')
+#!-------------------------------------------------------------------------
+#AT(%GatherObjects)                                                             #!Ensure objects are known and loaded in memory
+  #CALL(%ReadABCFiles(ABC))                                                     #!Read ABC class headers if needed
+  #CALL(%AddObjectList(ABC),'RTree'& %ActiveTemplateInstance)                   #!Add the template object to object list 
+  #ADD(%ObjectList,%ThisObjectName)                                             #!Add the object to the list of all objects
+  #SET(%ObjectListType,'RelationTree')                                          #!Set the base class name
+#ENDAT                                                                          #! end #AT(%GatherObjects)
+#!-------------------------------------------------------------------------
+#AT(%LocalDataClasses),WHERE(%ControlTemplate='RelationalTree(CBook)')          #!At local class embed point
+  #PURGE(%NewMethods)                                                           #!Clear out all new methods (note: this means one can't use hand added new methods)
+  #FIX(%File,%Primary)                                                          #!Start with the primary file
+  #CALL(%AddMethods,'Load' & %File,'()')                                        #!Add this new method based on the file
+  #FOR(%Secondary),WHERE(%SecondaryTo = %File AND %SecondaryType = 'MANY:1')    #!Do the same for each related file
+    #FIX(%File,%Secondary)                                                      #!Set the current secondary file
+    #CALL(%AddMethods,'Load' & %File,'()')                                      #!and add the method based on it to the class
+  #ENDFOR                                                                       #! end #FOR(%Secondary),WHERE(%SecondaryTo = %File)
+  #CALL(%SetClassItem(ABC), 'RTree' & %ActiveTemplateInstance)                  #!Set the current instance
+  #INSERT(%GenerateClass(ABC), 'RTree' & %ActiveTemplateInstance, 'Local instance and definition'),NOINDENT  #!and generate class instance into column 1, but preserve indent of template code
+#ENDAT                                                                          #! end #AT(%LocalDataClasses),WHERE(%ControlTemplate='RelationalTree')
+#!-------------------------------------------------------------------------
+#AT(%ProcedureRoutines),WHERE(%ControlTemplate='RelationalTree(CBook)')         #!generate the tree for methods if control template present
+  #CALL(%GenerateVirtuals(ABC),'RTree' & %ActiveTemplateInstance,'Local Objects|Abc Objects|Relational Tree','%EmbedVirtuals(CBook)')
+#ENDAT                                                                          #! end #AT(%ProcedureRoutines),WHERE(%ControlTemplate='RelationalTree(CBook)')
+#!-------------------------------------------------------------------------
+#AT(%TreeClassMethodCodeSection,%ActiveTemplateInstance),PRIORITY(5000),DESCRIPTION('Parent Call'),WHERE(%ParentCallValid())  #!Add parent call embed point
+  #CALL(%GenerateParentCall(ABC))                                               #!Generate the parent call
+#ENDAT                                                                          #! end #AT(%TreeClassMethodCodeSection,%ActiveTemplateInstance),PRIORITY(5000),DESCRIPTION('Parent Call'),WHERE(%ParentCallValid())
+#!-------------------------------------------------------------------------
+#IF(%BaseClassToUse())                                                          #!If there is a base class
+  #CALL(%FixClassName(ABC),%BaseClassToUse())                                   #!Assign the base class, cleaning up any errors
+  #FOR(%pClassMethod)                                                           #!For every method in this class
+    #FOR(%pClassMethodPrototype),WHERE(%MethodEmbedPointValid())                #!and the prototype is not private  
+      #CALL(%SetupMethodCheck(ABC))                                             #!ensure the proper instance, any overrides, etc are generated
+      #EMBED(%TreeMethodDataSection,'Relational Object Tree Method Data Section'),%ActiveTemplateInstance,%pClassMethod,%pClassMethodPrototype,LABEL,DATA,PREPARE(,%FixClassName(%FixBaseClassToUse('RelationTree'))),TREE(%GetEmbedTreeDesc('TREE','DATA'))
+      #?CODE                                                                    #<!Add CODE statement for method
+      #EMBED(%TreeMethodCodeSection,'Relational Object Tree Method Code Section'),%ActiveTemplateInstance,%pClassMethod,%pClassMethodPrototype,PREPARE(,%FixClassName(%FixBaseClassToUse('RelationTree'))),TREE(%GetEmbedTreeDesc('TREE','CODE'))
+      #CALL(%CheckAddMethodPrototype(ABC),%ClassLines)                          #!Generate the prototype and structure for each method
+    #ENDFOR                                                                     #! end #FOR(%pClassMethodPrototype),WHERE(%MethodEmbedPointValid())
+  #ENDFOR                                                                       #! end #FOR(%pClassMethod)
+  #CALL(%GenerateNewLocalMethods(ABC),'TREE',%True)                             #!Generate any new methods code from class dialog, if present
+#ENDIF                                                                          #! end #IF(%BaseClassToUse())
+#!-------------------------------------------------------------------------
+#! Add target language code for a generic list box with tree, color and icon attributes
+  CONTROLS
+    LIST,AT(,,150,100),USE(?RTree),FORMAT('800L*IT@s200@'),FROM(QTree),#REQ
+  END
+#! end controls
+#!-------------------------------------------------------------------------
+#CLASS('Format Object Tree','Format a variable in the ' & %ActiveTemplateInstanceDescription) #!Formula editor class
+#!-------------------------------------------------------------------------
+#AT(%CustomGlobalDeclarations)                                                  #!Add any icons to project tree
+  #INSERT(%FileControlSetFlags(ABC))                                            #!Add all files from table dialog to %UsedFile
+  #FIX(%Driver,%UsedFile)                                                       #! FIX to file's driver
+  #PROJECT(%DriverLIB)                                                          #!Add current file driver to project
+  #FOR(%Control),WHERE(%ControlInstance = %ActiveTemplateInstance)              #!For each control matching template instance
+    #IF(%ControlHasIcon)                                                        #!If this control has an icon
+      #IF(%TreeTitleIcon)                                                       #!If there is a title icon
+        #INSERT(%StandardAddIconToProject(ABC),%TreeTitleIcon)                  #!Add it to the project
+      #ENDIF                                                                    #! end #IF(%TreeTitleIcon)
+      #IF(%PrimaryDefaultIcon)                                                  #!If primary display has an icon
+        #INSERT(%StandardAddIconToProject(ABC),%PrimaryDefaultIcon)             #!Add it to the project
+      #ENDIF                                                                    #! end #IF(%PrimaryDefaultIcon)
+      #FOR(%PrimaryConditionalIcons)                                            #!If primary display has conditional icons
+        #INSERT(%StandardAddIconToProject(ABC),%PrimaryConditionalIcon)         #!Add it to the project
+      #ENDFOR                                                                   #! end #FOR(%PrimaryConditionalIcons)
+      #FOR(%Secondary),WHERE(%SecondaryType = 'MANY:1')                         #!For all secondary files with MANY:1 relationship
+        #IF(%SecondaryDefaultIcon)                                              #!and the secondary display has a default icon
+          #INSERT(%StandardAddIconToProject(ABC),%SecondaryDefaultIcon)         #!add it to the project 
+        #ENDIF                                                                  #! end #IF(%SecondaryDefaultIcon)
+        #FOR(%SecondaryConditionalIcons)                                        #!If this secondary file has a conditional icon
+          #INSERT(%StandardAddIconToProject(ABC),%SecondaryConditionalIcon)     #!add it to the project
+        #ENDFOR                                                                 #! end #FOR(%SecondaryConditionalIcons)
+      #ENDFOR                                                                   #! end #FOR(%Secondary),WHERE(%SecondaryType = 'MANY:1')
+    #ENDIF                                                                      #! end #IF(%ControlHasIcon)
+  #ENDFOR                                                                       #! end #FOR(%Control),WHERE(%ControlInstance = %ActiveTemplateInstance)
+#ENDAT                                                                          #! end #AT(%CustomGlobalDeclarations)
+#!-------------------------------------------------------------------------
+#AT(%CustomModuleDeclarations),WHERE(%AcceptToolbarControl)                     #!Write the proper INCLUDE statement
+  #CALL(%AddModuleIncludeFile(ABC),%ToolbarRelTreeType)                         #!Insert the include file
+#ENDAT                                                                          #! end #AT(%CustomModuleDeclarations),WHERE(%AcceptToolbarControl
+#!-------------------------------------------------------------------------
+#AT(%GenerateInstanceUpdate),WHERE(%AcceptToolbarControl AND %GenerateReltreeInstance=0)  #!Tie in any updates allowed from toolbar
+  #SET(%GenerateReltreeInstance,%ActiveTemplateInstance)                        #!Current instance assignment
+#ENDAT                                                                          #! end #AT(%GenerateInstanceUpdate),WHERE(%AcceptToolbarControl AND %GenerateReltreeInstance=0)
+#!-------------------------------------------------------------------------
+#AT(%DataSection),PRIORITY(3500),DESCRIPTION('Views & Queues')                  #!At data section
+  #INSERT(%ConstructView(ABC)),NOINDENT                                         #!Generated VIEW based on files in tree
+#ENDAT                                                                          #! end #AT(%DataSection),PRIORITY(3500),DESCRIPTION('Views & Queues')
+#!-------------------------------------------------------------------------
+#AT(%DataSection),PRIORITY(3500)                                                #!At data embed point
+  #IF(%AcceptToolBarControl)                                                    #!If toolbars are used, generate proper code
+%[20]DerivedInstance CLASS(%ToolbarRelTreeType)                                 #<!Derived instance
+TakeEvent              PROCEDURE(<*LONG VCR>,WindowManager WM),DERIVED          #<!Overridden method
+%[20]NULL END                                                                   #<! end %DerivedInstance definition
+%NULL
+  #ENDIF                                                                        #! end #IF(%AcceptToolBarControl)
+%[20]TreeQueue QRelTree                                                         #<!Local queue from parent type
+%[20]LoadedQueue LoadedQ                                                       #<!Local queue from parent type
+%NULL
+#ENDAT                                                                          #! end #AT(%DataSection),PRIORITY(3500)
+#!-------------------------------------------------------------------------
+#AT(%WindowManagerMethodCodeSection,'Init','(),BYTE'),PRIORITY(8500),WHERE(%AcceptToolBarControl AND %IsFirstInstance)
+Toolbar.AddTarget(%DerivedInstance, %TreeControl)                               #<!Alert the toolbar manager about the tree control
+%InstancePrefix.AssignButtons()                                                 #<!Local instance connecting toolbar edit buttons
+#ENDAT
+#!-------------------------------------------------------------------------
+#AT(%WindowManagerMethodCodeSection,'Init','(),BYTE'),PRIORITY(8200)            #!Current procedure start-up code
+%InstancePrefix.QRT &= %TreeQueue                                               #<!Reference assignment to queue
+%InstancePrefix.LDQ &= %LoadedQueue                                             #<!Reference assignment to queue
+RetVal = %InstancePrefix.InitTree(%Window,%TreeControl,%Primary)                #<!Init the Tree Control
+IF RetVal                                                                       #<!If Tree failed to Init OK (did not return zero)
+  ASSERT(~RetVal,'Tree Initialization failure!')                                #<!Show assert message
+END                                                                             #<! end IF RetVal
+%InstancePrefix.ContractAll()                                                   #<!Start off in contracted mode for quick loading
+#ENDAT                                                                          #! end #AT(%WindowManagerMethodCodeSection,'Init','(),BYTE'),PRIORITY(8200)
+#!-------------------------------------------------------------------------
+#AT (%LocalDataAfterClasses)
+RetVal              LONG                                                        #<!Local return value declaration
+#ENDAT
+#!-------------------------------------------------------------------------
+#AT(%WindowManagerMethodCodeSection,'Init','(),BYTE'),PRIORITY(8500)            #!At ThisWindow.Init embed
+#FIX(%Control,%TreeControl)                                                     #!Set control to tree control
+#IF(%ControlHasIcon)                                                            #!If there are icons in use
+  #FOR(%IconList),WHERE(%IconListType <> 'Variable')                            #!and icons are not variable
+    #SET(%ValueConstruct,INSTANCE(%IconList))                                   #!Set icon to current value construct
+    #IF(%IconListType = 'Built-In')                                             #!If icon is a built-in type, gen proper code
+%TreeControl{PROP:IconList,%ValueConstruct} = %IconList                         #<!Set built-in icon list
+    #ELSIF(%IconListType = 'File')                                              #!else gen proper code for external icons
+%TreeControl{PROP:IconList,%ValueConstruct} = '~%IconList'                      #<!Set external icon list
+    #ENDIF                                                                      #! end #IF(%IconListType = 'Built-In')
+  #ENDFOR                                                                       #! end #FOR(%IconList),WHERE(%IconListType <> 'Variable')
+#ENDIF                                                                          #! end #IF(%ControlHasIcon)
+%TreeControl{PROP:Selected} = True                                              #<!Ensure the tree control is selected
+#ENDAT                                                                          #! end #AT(%WindowManagerMethodCodeSection,'Init','(),BYTE'),PRIORITY(8500)
+#!-------------------------------------------------------------------------
+#AT(%WindowManagerMethodCodeSection,'Init','(),BYTE'),PRIORITY(8750)            #!Add the alert keys for the tree control
+  #IF(%ExpandKeyCode)                                                           #!If there is an expand keycode defined by user
+%TreeControl{PROP:Alrt,255} = %ExpandKeyCode                                    #<!Alert the user defined expansion keycode
+  #ELSE                                                                         #!Use default expand keystroke
+%TreeControl{PROP:Alrt,255} = CtrlRight                                         #<!Alert the default expansion keycode
+  #ENDIF                                                                        #! end #IF(%ExpandKeyCode)
+  #IF(%ContractKeyCode)                                                         #!If there is a contract keycode defined by user
+%TreeControl{PROP:Alrt,254} = %ContractKeyCode                                  #<!Alert the user defined contract keycode
+  #ELSE                                                                         #!Else use the default contraction keycode
+%TreeControl{PROP:Alrt,254} = CtrlLeft                                          #<!Alert the default contract keycode
+  #ENDIF                                                                        #! end #IF(%ContractKeyCode)
+  #IF(%UpdatesPresent)                                                          #!If this list is updatable
+%TreeControl{PROP:Alrt,253} = MouseLeft2                                        #<!Alert the right mouse double click for editing
+  #ENDIF                                                                        #! end #IF(%UpdatesPresent
+#ENDAT                                                                          #! end #AT(%WindowManagerMethodCodeSection,'Init','(),BYTE'),PRIORITY(8750
+#!-------------------------------------------------------------------------
+#AT(%WindowManagerMethodCodeSection,'Kill','(),BYTE'),PRIORITY(8200)            #!Last method executed when this procedure dies
+%InstancePrefix.QRT &= NULL                                                     #<!Dereference queue
+%InstancePrefix.LDQ &= NULL                                                     #<!Dereference queue
+#ENDAT                                                                          #! end #AT(%WindowManagerMethodCodeSection,'Kill','(),BYTE'),PRIORITY(8200)
+#!-------------------------------------------------------------------------
+#AT(%WindowEventHandling,'GainFocus')                                           #!When window gains focus
+%InstancePrefix.CurrentChoice = CHOICE(%TreeControl)                            #<!Set the current choice
+GET(%TreeQueue,%InstancePrefix.CurrentChoice)                                   #<!Get it from the queue
+%InstancePrefix.NewItemLevel = %InstancePrefix.QRT.Level                        #<!Assign level value to property
+%InstancePrefix.NewItemPosition = %InstancePrefix.QRT.Position                  #<!Assign position value to property
+%InstancePrefix.RefreshTree()                                                   #<!Call refresh method
+#ENDAT                                                                          #! end #AT(%WindowEventHandling,'GainFocus')
+#!-------------------------------------------------------------------------
+#AT(%ControlEventHandling,%TreeControl,'NewSelection')                          #!For list new selection event
+  #IF(%UpdatesPresent OR %GiveExpandContractOption)                             #!and updatable OR contractable
+IF KEYCODE() = MouseRight                                                       #<!If right click
+    #IF(%UpdatesPresent AND %GiveExpandContractOption)                          #!If updatable AND contractable
+  EXECUTE(POPUP('%'InsertPopupText|%'ChangePopupText|%'DeletePopupText|-|%'ExpandPopupText|%'ContractPopupText'))  #<! Execute edits, navigation from pop-up menu
+    %InstancePrefix.AddEntry()                                                  #<!Call insert method
+    %InstancePrefix.EditEntry()                                                 #<!Call edit method
+    %InstancePrefix.DeleteEntry()                                               #<!Call delete method
+    %InstancePrefix.ExpandAll()                                                 #<!Call expand tree method
+    %InstancePrefix.ContractAll()                                               #<!Call contract tree method
+  END                                                                           #<! end EXECUTE(POPUP('%'InsertPopupText|%'ChangePopupText|%'DeletePopupText|-|%'ExpandPopupText|%'ContractPopupText')
+    #ELSIF(%UpdatesPresent)                                                     #!Else only updates
+  EXECUTE(POPUP('%'InsertPopupText|%'ChangePopupText|%'DeletePopupText'))       #<! Execute edits from pop-up menu
+    %InstancePrefix.AddEntry()                                                  #<!Call insert method
+    %InstancePrefix.EditEntry()                                                 #<!Call edit method
+    %InstancePrefix.DeleteEntry()                                               #<!Call delete method
+  END                                                                           #<! end EXECUTE(POPUP('%'InsertPopupText|%'ChangePopupText|%'DeletePopupText'))
+    #ELSE                                                                       #!No edits
+  EXECUTE(POPUP('%'ExpandPopupText|%'ContractPopupText'))                       #<!Just expand/contract options
+    %InstancePrefix.ExpandAll()                                                 #<!Call expand tree method
+    %InstancePrefix.ContractAll()                                               #<!Call contract tree method
+  END                                                                           #<! end EXECUTE(POPUP('%'ExpandPopupText|%'ContractPopupText'))
+    #ENDIF                                                                      #! end #IF(%UpdatesPresent AND %GiveExpandContractOption)
+END                                                                             #<! end IF KEYCODE() = MouseRight
+  #ENDIF                                                                        #! end #IF(%UpdatesPresent OR %GiveExpandContractOption)
+#ENDAT                                                                          #! end #AT(%ControlEventHandling,%TreeControl,'NewSelection')
+#!-------------------------------------------------------------------------
+#AT(%ControlEventHandling,%TreeControl,'Expanded')                              #!When a node is expanded
+%InstancePrefix.LoadLevel()                                                     #<!Call method to load current level
+#ENDAT                                                                          #! end #AT(%ControlEventHandling,%TreeControl,'Expanded')
+#!-------------------------------------------------------------------------
+#AT(%ControlEventHandling,%TreeControl,'Contracted')                            #!When a node is contracted
+%InstancePrefix.UnloadLevel()                                                   #<!Call method to unload level
+#ENDAT                                                                          #! end #AT(%ControlEventHandling,%TreeControl,'Contracted')
+#!-------------------------------------------------------------------------
+#AT(%ControlEventHandling,%TreeControl,'AlertKey')
+CASE KEYCODE()
+  #IF(%ExpandKeyCode)
+OF %ExpandKeyCode
+  #ELSE
+OF CtrlRight
+  #ENDIF
+  %TreeControl{PropList:MouseDownRow} = CHOICE(%TreeControl)
+  POST(EVENT:Expanded,%TreeControl)
+  #IF(%ContractKeyCode)
+OF %ContractKeyCode
+  #ELSE
+OF CtrlLeft
+  #ENDIF
+  %TreeControl{PropList:MouseDownRow} = CHOICE(%TreeControl)
+  POST(EVENT:Contracted,%TreeControl)
+  #IF(%UpdatesPresent)
+OF MouseLeft2
+  %InstancePrefix.EditEntry()
+  #ENDIF
+END
+#ENDAT
+#!-------------------------------------------------------------------------
+#AT(%ControlOtherEventHandling,%TreeControl)
+  #SET(%ValueConstruct,%True)
+  #FOR(%ControlEvent),WHERE(%ControlEvent = 'AlertKey')
+    #SET(%ValueConstruct,%False)
+  #ENDFOR
+  #IF(%ValueConstruct)
+CASE EVENT()
+OF EVENT:AlertKey
+  CASE KEYCODE()
+    #IF(%ExpandKeyCode)
+  OF %ExpandKeyCode
+    #ELSE
+  OF CtrlRight
+    #ENDIF
+    %TreeControl{PROPLIST:MouseDownRow} = CHOICE(%TreeControl)
+    POST(EVENT:Expanded,%TreeControl)
+    #IF(%ContractKeyCode)
+  OF %ContractKeyCode
+    #ELSE
+  OF CtrlLeft
+    #ENDIF
+    %TreeControl{PROPLIST:MouseDownRow} = CHOICE(%TreeControl)
+    POST(EVENT:Contracted,%TreeControl)
+    #IF(%UpdatesPresent)
+  OF MouseLeft2
+    %InstancePrefix.EditEntry()
+    #ENDIF
+  END
+END
+  #ENDIF
+#ENDAT
+#!RelationTree methods-----------------------------------------------------
+#!-------------------------------------------------------------------------
+#!-------------------------------------------------------------------------
+#AT(%TreeClassMethodCodeSection,%ActiveTemplateInstance,'AssignButtons','()'),WHERE(%AcceptToolbarControl)
+#EMBED(%AssignToolbarButtons,'Assign Toolbar Buttons'),%ActiveTemplateInstance,HIDE
+Toolbar.SetTarget(%TreeControl)                                                 #<! Tell toolbar about the tree control
+#ENDAT
+#!-------------------------------------------------------------------------
+#AT(%TreeClassMethodCodeSection,%ActiveTemplateInstance,'RefreshTree','()')     #!RefreshTree method code
+FREE(%TreeQueue)                                                                #<!Delete all entries from the queue
+SELF.Load%Primary()                                                             #<!Call method to load the %Primary file
+IF SELF.NewItemLevel                                                            #<!If new item was added
+  SELF.CurrentChoice = 0                                                        #<!Set current choice to zero
+  LOOP                                                                          #<!Start looping through queue
+    SELF.CurrentChoice += 1                                                     #<!Increment current choice field
+    GET(%TreeQueue,SELF.CurrentChoice)                                          #<!Get queue record by current choice value
+    IF ErrorCode() THEN BREAK.                                                  #<!If not successful, break out of loop.
+    IF ABS(SELF.QRT.Level) <> ABS(SELF.NewItemLevel) THEN CYCLE.                #<!If the stored level not equal to new item level, loop again.
+    IF SELF.QRT.Position <> SELF.NewItemPosition THEN CYCLE.                    #<!If stored position not equal to new position, loop again.
+    SELECT(%TreeControl,SELF.CurrentChoice)                                     #<!Put highlight on new item.
+    BREAK                                                                       #<!Break out of loop
+  END                                                                           #<! end LOOP
+END                                                                             #<! end IF SELF.NewItemLevel
+#ENDAT                                                                          #! end #AT(%TreeClassMethodCodeSection,%ActiveTemplateInstance,'RefreshTree','()')
+#!-------------------------------------------------------------------------
+#AT(%TreeClassMethodCodeSection,%ActiveTemplateInstance,'ContractAll','()')
+SELF.Load%Primary()                                                             #<!Call new method after PARENT call
+#ENDAT
+#!-------------------------------------------------------------------------
+#AT(%TreeClassMethodCodeSection,%ActiveTemplateInstance,'ExpandAll','()')
+SELF.Load%Primary()                                                             #<!Call new method after PARENT call
+SELF.LoadAll = False                                                            #<!Set property to false so load/unload level moethods used instead.
+#ENDAT
+#!-------------------------------------------------------------------------
+#AT (%TreeClassMethodCodeSection,%ActiveTemplateInstance,'LoadLevel','()')      #!Code for LoadLevel() method
+SELF.CurrentChoice = %TreeControl{PROPLIST:MouseDownRow}                        #<!Assign the current line to current choice property
+GET(%TreeQueue,SELF.CurrentChoice)                                              #<!Get the queue record based on choice value
+IF ~SELF.QRT.Loaded                                                             #<!If the record is not loaded
+  SELF.QRT.Level = ABS(SELF.QRT.Level)                                          #<!Convert level value to positive number
+  PUT(%TreeQueue)                                                               #<!Write changes back to queue
+  SELF.QRT.Loaded = True                                                        #<!Indicate it is now loaded
+  SELF.LDQ.LoadedLevel = ABS(SELF.QRT.Level)                                    #<!Assign level to loaded queue
+  SELF.LDQ.LoadedPosition = SELF.QRT.Position                                   #<!Assign position to loaded queue
+  ADD(SELF.LDQ,SELF.LDQ.LoadedLevel,SELF.LDQ.LoadedPosition)                    #<!Get the queue record by key values
+  EXECUTE(ABS(SELF.QRT.Level))                                                  #<!Execute one statement according to level number
+  #FOR(%TreeLevelFile)                                                          #!For each file
+    BEGIN                                                                       #<!Start compound statements
+    #IF(%TreeLevel=1)                                                           #!If this is the primary file
+      #IF(%PrimaryKey)                                                          #!and using a key
+      REGET(%PrimaryKey,SELF.QRT.Position)                                      #<!Reget by key order, postition value
+      #ELSE                                                                     #!else no key used
+      REGET(%Primary,SELF.QRT.Position)                                         #<!Reget by record order, position value
+      #ENDIF                                                                    #! end #IF(%PrimaryKey
+    #ELSE                                                                       #!otherwise, related file is highlighted
+      REGET(%TreeLevelFile,SELF.QRT.Position)                                   #<!Reget secondary file in record order, posistion value.
+    #ENDIF                                                                      #! end #IF(%TreeLevel=1)
+      SELF.FormatFile(%TreeLevelFile)                                           #<!Call method to format the data for %TreeLevelFile file
+    END                                                                         #<! end BEGIN
+  #ENDFOR                                                                       #! end #FOR(%TreeLevelFile)
+  END                                                                           #<! end EXECUTE(ABS(SELF.QRT.Level))
+  PUT(%TreeQueue)                                                               #<!Write any changes from format method
+  EXECUTE(ABS(SELF.QRT.Level))                                                  #<!Execute choice based on level.
+  #FOR(%TreeLevelFile),WHERE(INSTANCE(%TreeLevelFile) > 1)                      #!For every related file
+    SELF.Load%TreeLevelFile()                                                   #<!Call method to load %TreeLevelFile file
+  #ENDFOR                                                                       #! end #FOR(%TreeLevelFile),WHERE(INSTANCE(%TreeLevelFile) > 1)
+  END                                                                           #<! end EXECUTE(ABS(SELF.QRT.Level))
+END                                                                             #<! end IF ~SELF.QRT.Loaded
+#ENDAT                                                                          #! end #AT (%TreeClassMethodCodeSection,%ActiveTemplateInstance,'LoadLevel','()')
+#!-------------------------------------------------------------------------
+#AT(%TreeClassMethodCodeSection,%ActiveTemplateInstance,'UnloadLevel','()')     #!Code for UnloadLevel method
+  SELF.CurrentChoice = %TreeControl{PROPLIST:MouseDownRow}                      #<!Assign the current line to current choice property
+  GET(%TreeQueue,SELF.CurrentChoice)                                            #<!Get the queue record based on choice value
+  IF SELF.QRT.Loaded                                                            #<!If this file is loaded
+    SELF.QRT.Level = -ABS(SELF.QRT.Level)                                       #<!Convert level value to positive number
+    PUT(%TreeQueue)                                                             #<!Write changes back to queue
+    SELF.QRT.Loaded = False                                                     #<!Indicate it is now loaded
+    SELF.LDQ.LoadedLevel = ABS(SELF.QRT.Level)                                  #<!Assign level to loaded queue
+    SELF.LDQ.LoadedPosition = SELF.QRT.Position                                 #<!Assign position to loaded queue
+    GET(SELF.LDQ,SELF.LDQ.LoadedLevel,SELF.LDQ.LoadedPosition)                  #<!Attempt to get queue record by key values
+    IF ~ErrorCode()                                                             #<!If no errors, a record exists
+      DELETE(%LoadedQueue)                                                          #<!So delete it.
+    END                                                                         #<! end IF ~ErrorCode()
+    EXECUTE(ABS(SELF.QRT.Level))                                                #<!Execute one statement according to level number
+  #FOR(%TreeLevelFile)                                                          #!For each file
+      BEGIN                                                                     #<!Start compound statements
+    #IF(%TreeLevel=1)                                                           #!If this is the primary file
+      #IF(%PrimaryKey)                                                          #!and using a key
+        REGET(%PrimaryKey,SELF.QRT.Position)                                    #<!Reget by key order, postition value
+      #ELSE                                                                     #!else no key used
+        REGET(%Primary,SELF.QRT.Position)                                       #<!Reget by record order, position value
+      #ENDIF                                                                    #! end #IF(%PrimaryKey
+    #ELSE                                                                       #!otherwise, related file is highlighted
+        REGET(%TreeLevelFile,SELF.QRT.Position)                                 #<!Reget secondary file in record order, posistion value.
+    #ENDIF                                                                      #! end #IF(%TreeLevel=1)
+        SELF.FormatFile(%TreeLevelFile)                                         #<!Call method to format the data for %TreeLevelFile file
+      END                                                                       #<! end BEGIN
+  #ENDFOR                                                                       #! end #FOR(%TreeLevelFile)
+    END                                                                         #<! end EXECUTE(ABS(SELF.QRT.Level))
+    PUT(%TreeQueue)                                                             #<!Write any changes from format method
+    SELF.CurrentLevel = ABS(SELF.QRT.Level)                                     #<!Assign new current level
+    SELF.CurrentChoice += 1                                                     #<!Assign current choice to new value
+    LOOP                                                                        #<!Start looping
+      GET(%TreeQueue,SELF.CurrentChoice)                                        #<!Get queue record by current choice
+      IF ErrorCode() THEN BREAK.                                                #<!Stop looping if no record found
+      IF ABS(SELF.QRT.Level) <= SELF.CurrentLevel THEN BREAK.                   #<!If current level less than equal to queue level, break out of loop
+      DELETE(%TreeQueue)                                                        #<!Otherwise, delete queue record
+    END                                                                         #<! end LOOP
+  END                                                                           #<! end IF SELF.QRT.Loaded
+
+#ENDAT                                                                          #! end #AT(%TreeClassMethodCodeSection,%ActiveTemplateInstance,'UnloadLevel','()')
+#!-------------------------------------------------------------------------
+#AT(%TreeClassMethodCodeSection,%ActiveTemplateInstance,'FormatFile','(*FILE xFile)')
+  #FOR(%TreeLevelFile),WHERE(INSTANCE(%TreeLevelFile) = 1)
+EXECUTE(ABS(SELF.QRT.Level))
+  BEGIN
+    #INSERT(%FormatPrimary)
+  END
+  #ENDFOR
+  #FOR(%TreeLevelFile),WHERE(INSTANCE(%TreeLevelFile) > 1)
+  BEGIN
+    #INSERT(%FormatSecondary)
+  END
+  #ENDFOR
+END
+#ENDAT
+#!-------------------------------------------------------------------------
+#AT(%NewMethodCodeSection,%ActiveTemplateInstance,%ClassItem,%NewMethods) #!Generate code in the new methods section of the module
+#IF (~(VAREXISTS(%PrimaryFlag)))                                        #!Re-entrant code, if symbol is not yet declared
+  #DECLARE(%PrimaryFlag,LONG)                                           #!Declare Primary file level flag
+#ENDIF                                                                  #! end #IF (~(VAREXISTS(%PrimaryFlag)))
+#IF (~(VAREXISTS(%NewInstance)))                                        #!Re-entrant code, if symbol is not yet declared
+  #DECLARE(%NewInstance,LONG)                                           #!Declare Primary file level flag
+#ENDIF                                                                  #! end #IF (~(VAREXISTS(%PrimaryFlag)))
+#SET(%NewInstance,%NewInstance + 1)                                     #!Increment counter
+#IF(%PrimaryFlag=0)                                                     #!If this is the first call, process primary file
+  #SET(%PrimaryFlag,%PrimaryFlag + 1)                                   #!Primary file processing done
+  #SELECT(%TreeLevelFile,1)                                             #!Fix the level file to a single value
+  #IF(%TreeTitle)                                                       #!If a string entered for tree title
+SELF.QRT.Display = '%TreeTitle'                                         #<!Set the tree title display property - primary file data follows
+SELF.QRT.Loaded = False                                                 #<!Set flag that tree is not loaded
+SELF.QRT.Position = ''                                                  #<!Clear the position string
+SELF.QRT.Level = 0                                                      #<!Set Tree title level to zero
+    #INSERT(%IconGroup),NOINDENT                                        #!Do Icon Handling
+    #CALL(%ColorGroup)                                                  #!Do color handling
+ADD(%TreeQueue)                                                         #<!Add value data to queue
+  #ENDIF                                                                #! End #IF(%TreeTitle)
+Access:%Primary.UseFile()                                               #<!Really open the %Primary primary file
+  #IF(%PrimaryKey)                                                      #!If there is a primary key
+SET(%PrimaryKey)                                                        #<!Read primary file in %PrimaryKey order
+  #ELSE                                                                 #!Read by file record order
+SET(%Primary)                                                           #<!Read %Primary primary file in record order
+  #ENDIF                                                                #! End #IF(%PrimaryKey)
+LOOP                                                                    #<!Read all records
+  #EMBED(%BeforePrimaryNext,'Relational Object Tree, Before NEXT on primary file'),%ActiveTemplateInstance,MAP(%ActiveTemplateInstance,%ActiveTemplateinstanceDescription),LEGACY
+  IF Access:%Primary.Next() <> Level:Benign                             #<!If a primary record was not read and returned an error
+    IF Access:%Primary.GetEOF()                                         #<!Was the error EOF?
+      BREAK                                                             #<!Break out of LOOP if it was
+    ELSE                                                                #<!else some other error happened
+      POST(EVENT:CloseWindow)                                           #<!Post close window message to ACCEPT loop
+      RETURN                                                            #<!and return
+    END                                                                 #<! end IF Access:%Primary.GetEOF()
+  END                                                                   #<! end IF Access:%Primary.Next() NOT= Level:Benign
+  #EMBED(%AfterPrimaryNext,'Relational Object Tree, After NEXT on primary file'),%ActiveTemplateInstance,MAP(%ActiveTemplateInstance,%ActiveTemplateinstanceDescription),LEGACY
+  #IF(%PrimaryFilter)                                                   #!If there is a filter in use
+  IF ~(%PrimaryFilter) THEN CYCLE.                                      #<!No matching record, cycle to top of LOOP
+  #ENDIF                                                                #! End #IF(%PrimaryFilter)
+  SELF.QRT.Loaded = False                                               #<!Set loaded property to false
+  #IF(%PrimaryKey)                                                      #!If reading by primary key
+  SELF.QRT.Position = POSITION(%PrimaryKey)                             #<!Set position by primary key %PrimaryKey
+  #ELSE                                                                 #!else, record order reads
+  SELF.QRT.Position = POSITION(%Primary)                                #<!Set position by primary %Primary file
+  #ENDIF                                                                #! End #IF(%PrimaryKey)
+  SELF.QRT.Level = %TreeLevel                                           #<!Assign current tree level for primary file
+  #IF(%TreeChildFile)                                                   #!If a child file is present
+    #INSERT(%TreeChildGroup),NOINDENT                                   #!Insert the Child File handling code
+    #SET(%PrimaryFlag,%True)                                            #!Primary file processing done
+  #ELSE                                                                 #!else this is not a child file
+  SELF.FormatFile(%TreeLevelFile)                                       #<!Call method to format primary %TreeLevelFile data
+  ADD(%TreeQueue,POINTER(%TreeQueue) + 1)                               #<!and upon return, add updated data to QUEUE
+  #ENDIF                                                                #! End #IF(%TreeChildFile)
+#ELSE                                                                   #!else primary flag <> 0
+  #FOR(%TreeLevelFile),WHERE(INSTANCE(%TreeLevelFile) = %NewInstance)   #!Get all files under primary file in table dialog
+    #FIX(%File,%TreeLevelFile)                                          #!Fix file
+    #FIX(%Secondary,%TreeLevelFile)                                     #!Fix secondary file
+    #FIX(%Relation,%TreeParentFile)                                     #!Fix relation file
+    #FIX(%Key,%FileKey)                                                 #!Fix key
+    #FOR(%RelationKeyField)                                             #!For each relating key element
+      #IF(%RelationKeyField)                                            #!If a relating field
+  %RelationKeyFieldLink = %RelationKeyField                             #<!Assign linking values
+      #ELSE                                                             #!Else not a relating key field
+        #FIX(%KeyField,%RelationKeyFieldLink)                           #!Fix key field
+        #IF(%KeyFieldSequence = 'ASCENDING')                            #!If key field is in asecnding order
+  CLEAR(%RelationKeyFieldLink)                                          #<!Clear relating fields to default low values
+        #ELSE                                                           #!Else key is descending order
+  CLEAR(%RelationKeyFieldLink,1)                                        #<!Clear relating fields to high values
+        #ENDIF                                                          #! end #IF(%KeyFieldSequence = 'ASCENDING')
+      #ENDIF                                                            #! end #IF(%RelationKeyField)
+    #ENDFOR                                                             #! end #FOR(%RelationKeyField)
+  Access:%File.UseFile()                                                #<!Really open the %File file
+  SET(%FileKey,%FileKey)                                                #<!Set read order, by key value
+  LOOP                                                                  #<!Read all records found
+    #EMBED(%BeforeSecondaryNext,'Relational Object Tree, Before NEXT on secondary file'),%ActiveTemplateInstance,%Secondary,MAP(%ActiveTemplateInstance,%ActiveTemplateInstanceDescription),LEGACY
+    IF Access:%File.Next()                                              #<!If unsuccesful read
+      IF Access:%File.GetEOF()                                          #<!Was it an EOF condition?
+        BREAK                                                           #<!Then break out of LOOP
+      ELSE                                                              #<!Else some other error
+        POST(EVENT:CloseWindow)                                         #<!Send a message to current window to close
+        RETURN                                                          #<!Return from this method
+      END                                                               #<! end IF Access:%File.GetEOF()
+    END                                                                 #<! end IF Access:%File.Next()
+    #FOR(%RelationKeyField),WHERE(%RelationKeyField)                    #!For all matching relating fields
+    IF %RelationKeyFieldLink <> %RelationKeyField THEN BREAK.           #<!If relating values don't match, then break out of loop
+    #ENDFOR                                                             #! end #FOR(%RelationKeyField),WHERE(%RelationKeyField)
+    #EMBED(%AfterSecondaryNext,'Relational Object Tree, After NEXT on secondary file'),%ActiveTemplateInstance,%Secondary,MAP(%ActiveTemplateInstance,%ActiveTemplateInstanceDescription),LEGACY
+    #IF(%SecondaryFilter)                                               #!If there is a filter on secondary file
+    IF ~(%SecondaryFilter) THEN CYCLE.                                  #<!If filtered, then cycle to top of loop.
+    #ENDIF                                                              #! end #IF(%SecondaryFilter)
+    SELF.QRT.Loaded = 0                                                 #<!Set queue field to indicate not loaded
+    SELF.QRT.Position = POSITION(%TreeLevelFile)                        #<!Save position to queue
+    SELF.QRT.Level = %TreeLevel                                         #<!Set level of %TreeLevelFile tree level file
+    #IF(%TreeChildFile)                                                 #!If a child file
+      #INSERT(%TreeChildGroup),NOINDENT                                 #!Insert the Child File handling code
+    #ELSE                                                               #! else #IF(%TreeChildFile)
+    SELF.FormatFile(%TreeLevelFile)                                     #<!Call method to format %TreeChildFile tree level file
+    ADD(%TreeQueue,POINTER(%TreeQueue) + 1)                             #<!Then add the formatted data to queue for display in tree list
+    #ENDIF                                                              #! end #IF(%TreeChildFile)
+  #ENDFOR                                                               #! end #FOR(%TreeLevelFile),WHERE(INSTANCE(%TreeLevelFile) > 1)
+#ENDIF                                                                  #! end #IF(%PrimaryFlag=0)
+END                                                                     #<! End LOOP
+#ENDAT                                                                  #! end #AT(%NewMethodCodeSection,%ActiveTemplateInstance,%ClassItem,%NewMethods)
+#!-------------------------------------------------------------------------
+#AT(%TreeClassMethodCodeSection,%ActiveTemplateInstance,'AddEntryServer','()')
+  #IF(%UpdatesPresent)
+    #EMBED(%BeginAddEntryRoutine,'Relational Object Tree, Beginning of Add Record'),%ActiveTemplateInstance,MAP(%ActiveTemplateInstance,%ActiveTemplateinstanceDescription),LEGACY,NOINDENT
+SELF.CurrentChoice = %TreeControl{PROPLIST:MouseDownRow}
+GET(%TreeQueue,SELF.CurrentChoice)
+CASE ABS(SELF.QRT.Level)
+    #IF(%PrimaryUpdate)
+OF 0
+      #EMBED(%BeforePreparingRecordOnAdd,'Relational Object Tree, Before Preparing Record for Add'),%ActiveTemplateInstance,%Primary,MAP(%ActiveTemplateInstance,%ActiveTemplateinstanceDescription),LEGACY
+  Access:%Primary.PrimeRecord
+  GlobalRequest = InsertRecord
+      #EMBED(%BeforeCallingUpdateOnAdd,'Relational Object Tree, Before Update Procedure on Add'),%ActiveTemplateInstance,%Primary,MAP(%ActiveTemplateInstance,%ActiveTemplateinstanceDescription),LEGACY
+  %PrimaryUpdate
+  IF GlobalResponse = RequestCompleted
+    SELF.NewItemLevel = 1
+    SELF.NewItemPosition = POSITION(%File)
+    SELF.RefreshTree()
+  END
+      #EMBED(%AfterCallingUpdateOnAdd,'Relational Object Tree, After Update Procedure on Add'),%ActiveTemplateInstance,%Primary,MAP(%ActiveTemplateInstance,%ActiveTemplateinstanceDescription),LEGACY
+    #ENDIF
+    #FOR(%TreeLevelFile),WHERE(INSTANCE(%TreeLevelFile) > 1)
+      #SUSPEND
+        #SET(%ValueConstruct,INSTANCE(%TreeLevelFile)-1)
+#?OF %ValueConstruct
+        #IF(INSTANCE(%TreeLevelFile) = ITEMS(%TreeLevelFile))
+          #SET(%ValueConstruct,%ValueConstruct + 1)
+#?OROF %ValueConstruct
+  #?LOOP WHILE ABS(SELF.QRT.Level) = %ValueConstruct
+    #?SELF.CurrentChoice -= 1
+    #?GET(%TreeQueue,SELF.CurrentChoice)
+  #?UNTIL ERRORCODE()
+        #ENDIF
+  #?REGET(%TreeParentFile,SELF.QRT.Position)
+        #EMBED(%BeforePreparingRecordOnAdd,'Relational Object Tree, Before Preparing Record for Add'),%ActiveTemplateInstance,%Primary,MAP(%ActiveTemplateInstance,%ActiveTemplateinstanceDescription),LEGACY
+  #?GET(%TreeLevelFile,0)
+        #FIX(%File,%TreeLevelFile)
+        #FIX(%Relation,%TreeParentFile)
+  #?CLEAR(%File)
+        #FOR(%FileKeyField),WHERE(%FileKeyField AND %FileKeyFieldLink)
+  #?%FileKeyField = %FileKeyFieldLink
+        #ENDFOR
+  #?Access:%File.PrimeRecord(1)
+  #?GlobalRequest = InsertRecord
+        #FIX(%File,%Primary)
+        #FIX(%Secondary,%TreeLevelFile)
+        #EMBED(%BeforeCallingUpdateOnAdd,'Relational Object Tree, Before Update Procedure on Add'),%ActiveTemplateInstance,%Secondary,MAP(%ActiveTemplateInstance,%ActiveTemplateinstanceDescription),LEGACY
+  %SecondaryUpdate
+  #?IF GlobalResponse = RequestCompleted
+        #SET(%ValueConstruct,INSTANCE(%TreeLevelFile))
+    #?SELF.NewItemLevel = %ValueConstruct
+    #?SELF.NewItemPosition = POSITION(%Secondary)
+    #?SELF.RefreshTree()
+  #?END
+        #EMBED(%AfterCallingUpdateOnAdd,'Relational Object Tree, After Update Procedure on Add'),%ActiveTemplateInstance,%Secondary,MAP(%ActiveTemplateInstance,%ActiveTemplateInstanceDescription),LEGACY
+      #RESUME
+    #ENDFOR
+END
+  #ENDIF
+#ENDAT
+#!-------------------------------------------------------------------------
+#AT (%TreeClassMethodCodeSection,%ActiveTemplateInstance,'EditEntryServer','()')
+  #IF(%UpdatesPresent)
+#EMBED(%BeginEditEntryRoutine,'Relational Object Tree, Beginning of Edit Record'),%ActiveTemplateInstance,HIDE
+SELF.CurrentChoice = %TreeControl{PROPLIST:MouseDownRow}
+GET(%TreeQueue,SELF.CurrentChoice)
+CASE ABS(SELF.QRT.Level)
+    #FIX(%File,%Primary)
+    #FOR(%TreeLevelFile)
+      #SUSPEND
+        #SET(%ValueConstruct,INSTANCE(%TreeLevelFile))
+#?OF %ValueConstruct
+  #?WATCH(%TreeLevelFile)
+  #?REGET(%TreeLevelFile,SELF.QRT.Position)
+  #?GlobalRequest = ChangeRecord
+        #IF(%ValueConstruct = 1)
+  #EMBED(%BeforeCallingUpdateOnEdit,'Relational Object Tree, Before Update Procedure on Edit'),%ActiveTemplateInstance,%Primary,MAP(%ActiveTemplateInstance,%ActiveTemplateinstanceDescription),LEGACY
+  %PrimaryUpdate
+        #ELSE
+          #FIX(%Secondary,%TreeLevelFile)
+          #EMBED(%BeforeCallingUpdateOnEdit,'Relational Object Tree, Before Update Procedure on Edit'),%ActiveTemplateInstance,%Secondary,MAP(%ActiveTemplateInstance,%ActiveTemplateinstanceDescription),LEGACY
+  %SecondaryUpdate
+        #ENDIF
+  #?IF GlobalResponse = RequestCompleted
+    #?SELF.NewItemLevel = 1
+    #?SELF.NewItemPosition = POSITION(%TreeLevelFile)
+    #?SELF.RefreshTree()
+  #?END
+        #IF(%ValueConstruct = 1)
+  #EMBED(%AfterCallingUpdateOnEdit,'Relational Object Tree, After Update Procedure on Edit'),%ActiveTemplateInstance,%Primary,MAP(%ActiveTemplateInstance,%ActiveTemplateinstanceDescription),LEGACY
+        #ELSE
+  #EMBED(%AfterCallingUpdateOnEdit,'Relational Object Tree, After Update Procedure on Edit'),%ActiveTemplateInstance,%Secondary,MAP(%ActiveTemplateInstance,%ActiveTemplateinstanceDescription),LEGACY
+        #ENDIF
+      #RESUME
+    #ENDFOR
+END
+  #ENDIF
+#ENDAT
+#!-------------------------------------------------------------------------
+#AT (%TreeClassMethodCodeSection,%ActiveTemplateInstance,'RemoveEntryServer','()')
+  #IF(%UpdatesPresent)
+#EMBED(%BeginRemoveEntryRoutine,'Relational Object Tree, Beginning of Remove Record'),%ActiveTemplateInstance,HIDE
+SELF.CurrentChoice = %TreeControl{PROPLIST:MouseDownRow}
+GET(%TreeQueue,SELF.CurrentChoice)
+CASE ABS(SELF.QRT.Level)
+    #FIX(%File,%Primary)
+    #FOR(%TreeLevelFile)
+      #SUSPEND
+        #SET(%ValueConstruct,INSTANCE(%TreeLevelFile))
+#?OF %ValueConstruct
+  #?REGET(%TreeLevelFile,SELF.QRT.Position)
+  #?GlobalRequest = DeleteRecord
+        #IF(%ValueConstruct = 1)
+  #EMBED(%BeforeCallingUpdateOnRemove,'Relational Object Tree, Before Delete Procedure'),%ActiveTemplateInstance,%Primary,MAP(%ActiveTemplateInstance,%ActiveTemplateinstanceDescription),LEGACY
+  %PrimaryUpdate
+        #ELSE
+          #FIX(%Secondary,%TreeLevelFile)
+  #EMBED(%BeforeCallingUpdateOnRemove,'Relational Object Tree, Before Delete Procedure'),%ActiveTemplateInstance,%Secondary,MAP(%ActiveTemplateInstance,%ActiveTemplateinstanceDescription),LEGACY
+  %SecondaryUpdate
+        #ENDIF
+  #?IF GlobalResponse = RequestCompleted
+    #?SELF.RefreshTree()
+  #?END
+        #IF(%ValueConstruct = 1)
+  #EMBED(%AfterCallingUpdateOnRemove,'Relational Object Tree, After Delete Procedure'),%ActiveTemplateInstance,%Primary,MAP(%ActiveTemplateInstance,%ActiveTemplateinstanceDescription),LEGACY
+        #ELSE
+  #EMBED(%AfterCallingUpdateOnRemove,'Relational Object Tree, After Delete Procedure'),%ActiveTemplateInstance,%Secondary,MAP(%ActiveTemplateInstance,%ActiveTemplateinstanceDescription),LEGACY
+        #ENDIF
+      #RESUME
+    #ENDFOR
+END
+  #ENDIF
+#ENDAT
+#!Update buttons control template------------------------------------------
+#!-------------------------------------------------------------------------
+#!-------------------------------------------------------------------------
+#CONTROL(RelObjTreeUpdateButtons,'Update buttons for a Relational Object Tree'),DESCRIPTION('Update buttons for a Relational Object Tree for ' & %Primary),REQ(RelationalTree)
+  CONTROLS
+       BUTTON('&Insert'),AT(,,45,14),USE(?Insert)
+       BUTTON('&Change'),AT(50,0,45,14),USE(?Change)
+       BUTTON('&Delete'),AT(50,0,45,14),USE(?Delete)
+  END
+#!-------------------------------------------------------------------------
+#ATSTART
+  #DECLARE(%HelpControl)
+  #FOR(%Control)
+    #IF(UPPER(EXTRACT(%ControlStatement,'STD',1))='STD:HELP')
+      #SET(%HelpControl,%Control)
+      #BREAK
+    #ENDIF
+  #ENDFOR
+  #DECLARE(%AddControl)
+  #DECLARE(%EditControl)
+  #DECLARE(%RemoveControl)
+  #FOR(%Control),WHERE(%ControlInstance = %ActiveTemplateInstance)
+    #CASE(%ControlOriginal)
+    #OF('?Insert')
+    #OROF('?Add')
+      #SET(%AddControl,%Control)
+      #SET(%ValueConstruct,EXTRACT(%ControlStatement,'BUTTON',1))
+      #IF(%ValueConstruct)
+        #SET(%ValueConstruct,SUB(%ValueConstruct,2,LEN(%ValueConstruct)-2))
+      #ELSE
+        #SET(%ValueConstruct,SUB(%ControlOriginal,2,LEN(%ControlOriginal)-1))
+      #ENDIF
+      #SET(%InsertPopupText,%ValueConstruct)
+    #OF('?Change')
+    #OROF('?Edit')
+      #SET(%EditControl,%Control)
+      #SET(%ValueConstruct,EXTRACT(%ControlStatement,'BUTTON',1))
+      #IF(%ValueConstruct)
+        #SET(%ValueConstruct,SUB(%ValueConstruct,2,LEN(%ValueConstruct)-2))
+      #ELSE
+        #SET(%ValueConstruct,SUB(%ControlOriginal,2,LEN(%ControlOriginal)-1))
+      #ENDIF
+      #SET(%ChangePopupText,%ValueConstruct)
+    #OF('?Delete')
+    #OROF('?Remove')
+      #SET(%RemoveControl,%Control)
+      #SET(%ValueConstruct,EXTRACT(%ControlStatement,'BUTTON',1))
+      #IF(%ValueConstruct)
+        #SET(%ValueConstruct,SUB(%ValueConstruct,2,LEN(%ValueConstruct)-2))
+      #ELSE
+        #SET(%ValueConstruct,SUB(%ControlOriginal,2,LEN(%ControlOriginal)-1))
+      #ENDIF
+      #SET(%DeletePopupText,%ValueConstruct)
+    #ENDCASE
+  #ENDFOR
+#ENDAT
+#!---------------------------------------------------------------------------
+#AT(%ControlEventHandling,%AddControl,'Accepted')
+%TreeControl{PropList:MouseDownRow} = CHOICE(%TreeControl)
+%InstancePrefix.AddEntry()
+#ENDAT
+#!---------------------------------------------------------------------------
+#AT(%ControlEventHandling,%RemoveControl,'Accepted')
+%TreeControl{PropList:MouseDownRow} = CHOICE(%TreeControl)
+%InstancePrefix.DeleteEntry()
+#ENDAT
+#!---------------------------------------------------------------------------
+#AT(%ControlEventHandling,%EditControl,'Accepted')
+%TreeControl{PropList:MouseDownRow} = CHOICE(%TreeControl)
+%InstancePrefix.EditEntry()
+#ENDAT
+#!---------------------------------------------------------------------------
+#AT(%ReltreeToolbarDispatch,%ActiveTemplateParentInstance),WHERE(%AcceptToolbarControl)
+OF Toolbar:Insert TO Toolbar:Delete
+  SELF.Control{PROPLIST:MouseDownRow} = CHOICE(SELF.Control) !! Server routines assume this
+  EXECUTE(ACCEPTED() - Toolbar:Insert + 1)
+    %InstancePrefix.AddEntry()
+    %InstancePrefix.EditEntry()
+    %InstancePrefix.DeleteEntry()
+  END
+#ENDAT
+#!-------------------------------------------------------------------------
+#AT(%LocalProcedures),WHERE(%AcceptToolbarControl)
+%DerivedInstance.TakeEvent      PROCEDURE(<*LONG VCR>,WindowManager WM)
+  CODE
+  CASE ACCEPTED()
+  OF Toolbar:Bottom TO Toolbar:Up
+    SELF.Control{PROPLIST:MouseDownRow} = CHOICE(SELF.Control) !! Server routines assume this
+    EXECUTE(ACCEPTED() - Toolbar:Bottom + 1)
+      %InstancePrefix.NextParent()
+      %InstancePrefix.PreviousParent()
+      %InstancePrefix.NextLevel()
+      %InstancePrefix.PreviousLevel()
+      %InstancePrefix.NextRecord()
+      %InstancePrefix.PreviousRecord()
+    END
+  #EMBED(%ReltreeToolbarDispatch,'Relational Object Tree Toolbar Dispatch'),%ActiveTemplateInstance,HIDE
+  ELSE
+    PARENT.TakeEvent(VCR,%WindowManager)
+  END
+#ENDAT
+#!---------------------------------------------------------------------------
+#AT(%BeginAddEntryRoutine)
+  #IF(%Control=%TreeControl)
+    #IF(%AddControl)
+IF %AddControl{PROP:Disable}
+  RETURN
+      #IF (~%AcceptToolbarControl)
+ELSIF %AddControl{PROP:Visible} = False
+  RETURN
+      #ENDIF
+END
+    #ENDIF
+  #ENDIF
+#ENDAT
+#!---------------------------------------------------------------------------
+#AT(%BeginRemoveEntryRoutine)
+  #IF(%Control=%TreeControl)
+    #IF(%RemoveControl)
+IF %RemoveControl{PROP:Disable}
+  RETURN
+      #IF (~%AcceptToolbarControl)
+ELSIF %RemoveControl{PROP:Visible} = False
+  RETURN
+      #ENDIF
+END
+    #ENDIF
+  #ENDIF
+#ENDAT
+#!---------------------------------------------------------------------------
+#AT(%BeginEditEntryRoutine)
+  #IF(%Control=%TreeControl)
+    #IF(%EditControl)
+IF %EditControl{PROP:Disable}
+  RETURN
+      #IF (~%AcceptToolbarControl)
+ELSIF %EditControl{PROP:Visible} = False
+  RETURN
+      #ENDIF
+END
+    #ENDIF
+  #ENDIF
+#ENDAT
+#!---------------------------------------------------------------------------
+#AT(%AssignToolbarButtons,%ActiveTemplateParentInstance),WHERE(%AcceptToolBarControl)
+  #IF (%RemoveControl)
+%DerivedInstance.DeleteButton = %RemoveControl
+  #ENDIF
+  #IF (%AddControl)
+%DerivedInstance.InsertButton = %AddControl
+  #ENDIF
+  #IF (%EditControl)
+%DerivedInstance.ChangeButton = %EditControl
+  #ENDIF
+  #IF (%HelpControl)
+%DerivedInstance.HelpButton = %HelpControl
+  #ENDIF
+#ENDAT
+#!Expand buttons control template------------------------------------------
+#!-------------------------------------------------------------------------
+#CONTROL(RelObjTreeExpandContractButtons,'Expand/Contract buttons for a Relational Object Tree'),DESCRIPTION('Expand/Contract buttons for a Relational Object Tree for ' & %Primary),REQ(RelationalTree)
+  CONTROLS
+       BUTTON('&Expand All'),AT(,,45,14),USE(?Expand)
+       BUTTON('Co&ntract All'),AT(50,0,45,14),USE(?Contract)
+  END
+#!-------------------------------------------------------------------------
+#ATSTART
+  #DECLARE(%ExpandControl)
+  #DECLARE(%ContractControl)
+  #FOR(%Control),WHERE(%ControlInstance = %ActiveTemplateInstance)
+    #CASE(%ControlOriginal)
+    #OF('?Expand')
+      #SET(%ExpandControl,%Control)
+      #SET(%ValueConstruct,EXTRACT(%ControlStatement,'BUTTON',1))
+      #SET(%ExpandPopupText,SUB(%ValueConstruct,2,LEN(%ValueConstruct)-2))
+    #OF('?Contract')
+      #SET(%ContractControl,%Control)
+      #SET(%ValueConstruct,EXTRACT(%ControlStatement,'BUTTON',1))
+      #SET(%ContractPopupText,SUB(%ValueConstruct,2,LEN(%ValueConstruct)-2))
+    #ENDCASE
+  #ENDFOR
+#ENDAT
+#!-------------------------------------------------------------------------
+#AT(%ControlEventHandling,%ExpandControl,'Accepted')
+%TreeControl{PropList:MouseDownRow} = CHOICE(%TreeControl)
+%InstancePrefix.ExpandAll()
+#ENDAT
+#!-------------------------------------------------------------------------
+#AT(%ControlEventHandling,%ContractControl,'Accepted')
+%TreeControl{PropList:MouseDownRow} = CHOICE(%TreeControl)
+%InstancePrefix.ContractAll()
+#ENDAT
+#!-------------------------------------------------------------------------

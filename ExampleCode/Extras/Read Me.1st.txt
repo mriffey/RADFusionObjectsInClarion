@@ -1,0 +1,20 @@
+Contents of this folder:
+
+C55edit extra.ini
+This file contains extra syntax color support for templates.
+Just copy the values found and paste at the end of the matching
+section.
+
+DO NOT rename this file to c55edit.ini!  It is NOT complete!  It
+is meant to be used to add extra settings in the EXISITING c55edit.ini
+file!
+
+Clariont.syn
+This is a Textpad4 syntax file.  Just copy it to the textpad system folder
+and add template document types and use this file for syntax coloring.  This
+file matches the color scheme in the book.  If you don't like them, then you know how 
+to change their values.
+
+TED
+This folder contains the beginnings of a template editor developed by Ron Schofield. 
+Simply copy the contents to any folder you wish and launch it there.

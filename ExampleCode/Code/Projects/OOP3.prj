@@ -1,0 +1,9 @@
+-- Example 3 - Manually creating and destroying objects
+#noedit
+#system win32
+#model clarion dll
+#pragma debug(vid=>full)
+#pragma optimize(cpu=>386)
+#pragma optimize(speed=>on)
+#compile "oop3.clw"
+#link "oop3.exe"

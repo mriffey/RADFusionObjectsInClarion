@@ -1,0 +1,445 @@
+#!-------------------------------------------------------------------------
+#GROUP(%EmbedVirtuals, %TreeText, %DataText, %CodeText)
+#EMBED(%TreeClassMethodDataSection,'Relational Object Tree Method Data Section'), %ActiveTemplateInstance,%pClassMethod,%pClassMethodPrototype,TREE(%TreeText & %DataText)
+  #?CODE
+  #EMBED(%TreeClassMethodCodeSection,'Relational Object Tree Method Code Section'), %ActiveTemplateInstance,%pClassMethod,%pClassMethodPrototype,TREE(%TreeText & %CodeText)
+#!-------------------------------------------------------------------------
+#GROUP(%ParentCallValid),AUTO
+#DECLARE(%RVal)
+#CALL(%ParentCallValid(ABC)),%RVal
+#RETURN(%RVal)
+#!-------------------------------------------------------------------------
+#GROUP(%GetObjectName,%Flag,%Instance=0),AUTO
+#DECLARE(%RVal)
+#CALL(%GetObjectName(ABC),%Flag,%Instance=0), %RVal
+#RETURN(%RVal)
+#!-------------------------------------------------------------------------
+#GROUP(%RelationTreeProperties)
+#SHEET
+  #TAB('&File Details')
+    #PREPARE
+      #FIND(%ControlInstance,%ActiveTemplateInstance,%Control)
+    #ENDPREPARE
+    #BOXED('Tree Heading')
+      #PROMPT('Tree Heading &Text:',@S255),%TreeTitle
+      #ENABLE(%ControlHasIcon)
+        #PROMPT('Tree Heading &Icon:',OPENDIALOG('Choose an icon','Icon files|*.ico')),%TreeTitleIcon
+      #ENDENABLE
+    #ENDBOXED
+    #BOXED('Key Codes')
+      #PROMPT('E&xpand branch:',KEYCODE),%ExpandKeyCode,DEFAULT('CtrlRight')
+      #PROMPT('&Contract branch:',KEYCODE),%ContractKeyCode,DEFAULT('CtrlLeft')
+    #ENDBOXED
+    #PROMPT('Accept control from ToolBar',CHECK),%AcceptToolBarControl,DEFAULT(1),AT(10)
+    #PROMPT('Give option to expand and contract all levels',CHECK),%GiveExpandContractOption,AT(10)
+    #BOXED('Primary File')
+      #PROMPT('&Display String:',@S255),%PrimaryDisplay
+      #PROMPT('&Update Procedure:',PROCEDURE),%PrimaryUpdate
+      #PROMPT('&Record Filter:',@S255),%PrimaryFilter
+    #ENDBOXED
+    #BOXED('Secondary Files')
+      #BUTTON('&Secondary Files'),FROM(%Secondary,%Secondary & ' - ' & %SecondaryDisplay),INLINE,WHERE(%SecondaryType = 'MANY:1'),AT(,,,75)
+        #SHEET
+          #TAB('Secondary &File Details')
+            #PROMPT('&Display String:',@S255),%SecondaryDisplay
+            #PROMPT('&Update Procedure:',PROCEDURE),%SecondaryUpdate
+            #PROMPT('&Record Filter:',@S255),%SecondaryFilter
+          #ENDTAB
+          #TAB('&Colors'),WHERE(%ControlHasColor)
+            #PREPARE
+              #FIND(%ControlInstance,%ActiveTemplateInstance,%Control)
+            #ENDPREPARE
+            #BOXED('Default Colors')
+              #PROMPT('Foreground &Normal:',COLOR),%DefaultSecondaryForegroundNormal,DEFAULT(-1)
+              #PROMPT('&Background Normal:',COLOR),%DefaultSecondaryBackgroundNormal,DEFAULT(-1)
+              #PROMPT('&Foreground Selected:',COLOR),%DefaultSecondaryForegroundSelected,DEFAULT(-1)
+              #PROMPT('Background &Selected:',COLOR),%DefaultSecondaryBackgroundSelected,DEFAULT(-1)
+            #ENDBOXED
+            #BOXED('Conditional Color Assignments')
+              #BUTTON('Conditional Color Assignments'),MULTI(%SecondaryConditionalColors,%SecondaryColorCondition),INLINE
+                #PROMPT('&Condition:',@S255),%SecondaryColorCondition
+                #PROMPT('Foreground &Normal:',COLOR),%ConditionalSecondaryForegroundNormal,DEFAULT(-1)
+                #PROMPT('&Background Normal:',COLOR),%ConditionalSecondaryBackgroundNormal,DEFAULT(-1)
+                #PROMPT('&Foreground Selected:',COLOR),%ConditionalSecondaryForegroundSelected,DEFAULT(-1)
+                #PROMPT('Background &Selected:',COLOR),%ConditionalSecondaryBackgroundSelected,DEFAULT(-1)
+              #ENDBUTTON
+            #ENDBOXED
+          #ENDTAB
+          #TAB('&Colors'),WHERE(NOT %ControlHasColor)
+            #PREPARE
+              #FIND(%ControlInstance,%ActiveTemplateInstance,%Control)
+            #ENDPREPARE
+            #DISPLAY('Your RelationTree is not set to use custom colors. To activate custom colors for your RelationTree, follow these steps.'),AT(10,30,175,24)
+            #DISPLAY('1.  If you aren''t in the window formatter, go there.'),AT(10,,175)
+            #DISPLAY('2.  Right-click on the RelationTree control, and select "List Box Format..."'),AT(10,,175,16)
+            #DISPLAY('3.  Select the RelationTree field, and click the "Properties" button.'),AT(10,,175,16)
+            #DISPLAY('4.  Check the "Color cells" Checkbox.'),AT(10,,175)
+            #DISPLAY('5.  When you call up the RelationTree actions window, this tab will let you set the colors for your RelationTree.'),AT(10,,175,16)
+          #ENDTAB
+          #TAB('&Icons'),WHERE(%ControlHasIcon)
+            #PREPARE
+              #FIND(%ControlInstance,%ActiveTemplateInstance,%Control)
+            #ENDPREPARE
+            #BOXED('Default Icon')
+              #PROMPT('&Default Icon:',OPENDIALOG('Choose an icon','Icon files|*.ico')),%SecondaryDefaultIcon
+            #ENDBOXED
+            #BOXED('Conditional Icon Usage')
+              #BUTTON('&Conditional Icon Usage'),MULTI(%SecondaryConditionalIcons,%SecondaryIconCondition),INLINE
+                #PROMPT('&Condition:',@S255),%SecondaryIconCondition
+                #PROMPT('&Icon:',OPENDIALOG('Choose an icon','Icon files|*.ico')),%SecondaryConditionalIcon
+              #ENDBUTTON
+            #ENDBOXED
+          #ENDTAB
+          #TAB('&Icons'),WHERE(NOT %ControlHasIcon)
+            #PREPARE
+              #FIND(%ControlInstance,%ActiveTemplateInstance,%Control)
+            #ENDPREPARE
+            #DISPLAY('Your RelationTree is not set to use icons. To activate icons for your RelationTree, follow these steps.'),AT(10,30,175,24)
+            #DISPLAY('1.  If you aren''t in the window formatter, go there.'),AT(10,,175)
+            #DISPLAY('2.  Right-click on the RelationTree control, and select "List Box Format..."'),AT(10,,175,16)
+            #DISPLAY('3.  Select the RelationTree field, and click the "Properties" button.'),AT(10,,175,16)
+            #DISPLAY('4.  Check the "Icons" Checkbox.'),AT(10,,175)
+            #DISPLAY('5.  When you call up the RelationTree actions window, this tab will let you set the colors for your RelationTree.'),AT(10,,175,16)
+          #ENDTAB
+        #ENDSHEET
+      #ENDBUTTON
+    #ENDBOXED
+  #ENDTAB
+  #TAB('&Colors'),WHERE(%ControlHasColor)
+    #PREPARE
+      #FIND(%ControlInstance,%ActiveTemplateInstance,%Control)
+    #ENDPREPARE
+    #BOXED('Default Colors')
+      #PROMPT('Foreground &Normal:',COLOR),%DefaultPrimaryForegroundNormal,DEFAULT(-1)
+      #PROMPT('&Background Normal:',COLOR),%DefaultPrimaryBackgroundNormal,DEFAULT(-1)
+      #PROMPT('&Foreground Selected:',COLOR),%DefaultPrimaryForegroundSelected,DEFAULT(-1)
+      #PROMPT('Background &Selected:',COLOR),%DefaultPrimaryBackgroundSelected,DEFAULT(-1)
+    #ENDBOXED
+    #BOXED('Conditional Color Assignments')
+      #BUTTON('Conditional Color Assignments'),MULTI(%PrimaryConditionalColors,%PrimaryColorCondition),INLINE,AT(,,,90)
+        #PROMPT('&Condition:',@S255),%PrimaryColorCondition
+        #PROMPT('Foreground &Normal:',COLOR),%ConditionalPrimaryForegroundNormal,DEFAULT(-1)
+        #PROMPT('&Background Normal:',COLOR),%ConditionalPrimaryBackgroundNormal,DEFAULT(-1)
+        #PROMPT('&Foreground Selected:',COLOR),%ConditionalPrimaryForegroundSelected,DEFAULT(-1)
+        #PROMPT('Background &Selected:',COLOR),%ConditionalPrimaryBackgroundSelected,DEFAULT(-1)
+      #ENDBUTTON
+    #ENDBOXED
+  #ENDTAB
+  #TAB('&Colors'),WHERE(NOT %ControlHasColor)
+    #PREPARE
+      #FIND(%ControlInstance,%ActiveTemplateInstance,%Control)
+    #ENDPREPARE
+    #DISPLAY('Your RelationTree is not set to use custom colors. To activate custom colors for your RelationTree, follow these steps.'),AT(10,30,175,24)
+    #DISPLAY('1.  If you aren''t in the window formatter, go there.'),AT(10,,175)
+    #DISPLAY('2.  Right-click on the RelationTree control, and select "List Box Format..."'),AT(10,,175,16)
+    #DISPLAY('3.  Select the RelationTree control, and click the "Properties" button.'),AT(10,,175,16)
+    #DISPLAY('4.  Check the "Color cells" Checkbox.'),AT(10,,175)
+    #DISPLAY('5.  When you call up the RelationTree actions window, this tab will let you set the colors for your RelationTree.'),AT(10,,175,16)
+  #ENDTAB
+  #TAB('&Icons'),WHERE(%ControlHasIcon)
+    #PREPARE
+      #FIND(%ControlInstance,%ActiveTemplateInstance,%Control)
+    #ENDPREPARE
+    #BOXED('Default Icon')
+      #PROMPT('&Default Icon:',OPENDIALOG('Choose an icon','Icon files|*.ico')),%PrimaryDefaultIcon
+    #ENDBOXED
+    #BOXED('Conditional Icon Usage')
+      #BUTTON('&Conditional Icon Usage'),MULTI(%PrimaryConditionalIcons,%PrimaryIconCondition),INLINE
+        #PROMPT('&Condition:',@S255),%PrimaryIconCondition
+        #PROMPT('&Icon:',OPENDIALOG('Choose an icon','Icon files|*.ico')),%PrimaryConditionalIcon
+      #ENDBUTTON
+    #ENDBOXED
+  #ENDTAB
+  #TAB('&Icons'),WHERE(NOT %ControlHasIcon)
+    #PREPARE
+      #FIND(%ControlInstance,%ActiveTemplateInstance,%Control)
+    #ENDPREPARE
+    #DISPLAY('Your RelationTree is not set to use icons. To activate icons for your RelationTree, follow these steps.'),AT(10,30,175,24)
+    #DISPLAY('1.  If you aren''t in the window formatter, go there.'),AT(10,,175)
+    #DISPLAY('2.  Right-click on the RelationTree control, and select "List Box Format..."'),AT(10,,175,16)
+    #DISPLAY('3.  Select the RelationTree field, and click the "Properties" button.'),AT(10,,175,16)
+    #DISPLAY('4.  Check the "Icons" Checkbox.'),AT(10,,175)
+    #DISPLAY('5.  When you call up the RelationTree actions window, this tab will let you set the colors for your RelationTree.'),AT(10,,175,16)
+  #ENDTAB
+#ENDSHEET
+#!-------------------------------------------------------------------------
+#GROUP(%IconGroup)
+    #IF(%ControlHasIcon)                                                #!Control has icons
+      #FIX(%IconList,%TreeTitleIcon)                                    #!Assign prompt value to icon list
+      #IF(%IconList)                                                    #!If this list is not empty
+        #CASE(%IconListType)                                            #!Inspect the icon type
+        #OF('Variable')                                                 #!If variable type icons
+SELF.QRT.Icon = %IconList                                                 #<!Set icon property from icon list
+        #ELSE                                                           #!Everything else except "variable"
+          #SET(%ValueConstruct,INSTANCE(%IconList))                       #!Set values to instance in icon list
+SELF.QRT.Icon = %ValueConstruct                                           #<!Set icon property from value construct
+        #ENDCASE                                                        #! End #CASE(%IconListType)
+      #ELSE                                                             #!No icon list
+SELF.QRT.Icon = 0                                                         #<!No icons, zero the property
+      #ENDIF                                                            #! End #IF(%IconList
+    #ENDIF                                                              #! End #IF(%ControlHasIcon)
+#!-------------------------------------------------------------------------
+#GROUP(%ColorGroup)
+    #IF(%ControlHasColor)                                               #!Is color switched on?
+SELF.QRT.NormalFG = -1                                                    #<!Set default normal foreground color
+SELF.QRT.NormalBG = -1                                                    #<!Set default normal background color
+SELF.QRT.SelectedFG = -1                                                  #<!Set default selected foreground color
+SELF.QRT.SelectedBG = -1                                                  #<!Set default selected background color
+    #ENDIF                                                              #! End #IF(%ControlHasColor)                                                     
+#!-------------------------------------------------------------------------
+#GROUP(%TreeChildGroup)
+  SELF.LDQ.LoadedLevel = ABS(SELF.QRT.Level)                                  #<!Set absolute level to property for tree child file
+  SELF.LDQ.LoadedPosition = SELF.QRT.Position                                 #<!Save position
+  GET(SELF.LDQ,SELF.LDQ.LoadedLevel,SELF.LDQ.LoadedPosition)                  #<!Get a record by level, POSITION
+  IF ErrorCode() AND SELF.LoadAll = False                                     #<!If queue record not found and not load all
+    #FIX(%File,%TreeChildFile)                                                #!Set file to single instance
+    #FIX(%Secondary,%TreeChildFile)                                           #!Set secondary to single instance
+    #FIX(%Relation,%TreeLevelFile)                                            #!Set level to single relation
+    #FIX(%Key,%FileKey)                                                       #!Fix key
+    #FOR(%RelationKeyField)                                                   #!For each relating field in key
+      #IF(%RelationKeyField)                                                  #!If this is a relating field
+    %RelationKeyFieldLink = %RelationKeyField                                 #<!Prime key values to linking fields of relation key
+      #ELSE                                                                   #!This is not a relation key field
+        #FIX(%KeyField,%RelationKeyFieldLink)                                 #!Set key field to relating field
+        #IF(%KeyFieldSequence = 'ASCENDING')                                  #!If sequence is ascending order
+    CLEAR(%KeyField,0)                                                        #<!Clear to low values
+          #ELSE                                                                 #!else descending
+    CLEAR(%KeyField,1)                                                        #<!clear to high values
+        #ENDIF                                                                #! End #IF(%KeyFieldSequence = 'ASCENDING')
+      #ENDIF                                                                  #! End #IF(%RelationKeyField)
+    #ENDFOR                                                                   #! End #FOR(%RelationKeyField)
+    Access:%File.UseFile()                                                    #<!Really open secondary %File
+    SET(%FileKey,%FileKey)                                                    #<!Set key order, by key value read method
+    LOOP                                                                      #<!Read all records by key order, key value
+    #EMBED(%BeforeSecondaryNext,'Relational Object Tree, Before NEXT on secondary file'),%ActiveTemplateInstance,%Secondary,MAP(%ActiveTemplateInstance,%ActiveTemplateInstanceDescription),LEGACY
+      IF Access:%File.Next()                                                  #<!If error reading next secondary record
+        IF Access:%File.GetEOF()                                              #<!Check to see if the error is EOF
+          BREAK                                                               #<!If so, break out of loop
+        ELSE                                                                  #<!else some other error happened
+          POST(EVENT:CloseWindow)                                             #<!Abandon method, procedure
+          RETURN                                                              #<!and bail out                    
+        END                                                                   #<! End IF Access:%File.GetEOF()
+      END                                                                     #<! End IF Access:%File.Next()
+    #FOR(%RelationKeyField),WHERE(%RelationKeyField)                          #!For each valid instance relating field
+      #IF(%KeyNoCase)                                                         #!If key is not case sensitive
+      IF UPPER(%RelationKeyFieldLink) <> UPPER(%RelationKeyField) THEN BREAK. #<!If relating values do not match, break out.
+      #ELSE                                                                   #!Key is case sensitive
+      IF %RelationKeyFieldLink <> %RelationKeyField THEN BREAK.               #<!If relating values do not match, break out.
+      #ENDIF                                                                  #! End #IF(%KeyNoCase)
+    #ENDFOR                                                                   #! End #FOR(%RelationKeyField),WHERE(%RelationKeyField)
+    #EMBED(%AfterSecondaryNext,'Relational Object Tree, After NEXT on secondary file'),%ActiveTemplateInstance,%Secondary,MAP(%ActiveTemplateInstance,%ActiveTemplateInstanceDescription),LEGACY
+    #IF(%SecondaryFilter)                                                     #!Is there a secondary filter?
+      IF ~(%SecondaryFilter) THEN CYCLE.                                      #<!If record does not match secondary filter, cycle to top of loop
+    #ENDIF                                                                    #! End #IF(%SecondaryFilter)
+      SELF.QRT.Level = -%TreeLevel                                            #<!Set tree level to negative to indicate loaded, yet collapsed node
+      BREAK                                                                   #<!Return normally
+    END                                                                       #<!End loop
+    SELF.FormatFile(%TreeLevelFile)                                           #<!Call method to format the %TreeLevelFile file tree row
+    ADD(%TreeQueue,POINTER(%TreeQueue) + 1)                                   #<!Add data to queue.
+  ELSE                                                                        #<!not filtered
+    IF SELF.LoadAll                                                           #<!If LoadAll property flag set
+      ADD(SELF.LDQ,SELF.LDQ.LoadedLevel,SELF.LDQ.LoadedPosition)              #<!Add to QUEUE
+    END                                                                       #<! End IF SELF.LoadAll
+    SELF.QRT.Level = %TreeLevel                                               #<!Set current tree level and positive number means node expanded
+    SELF.QRT.Loaded = True                                                    #<!Set loaded property flag to true.
+    SELF.FormatFile(%TreeLevelFile)                                           #<!Call format method for %TreeLevelFile file tree row
+    ADD(%TreeQueue,POINTER(%TreeQueue) + 1)                                   #<!Upon return, add data to QUEUE
+    SELF.Load%TreeChildFile()                                                 #<!Load the %TreeChildFile child file
+  END                                                                         #<! End IF ERRORCODE() AND SELF.LoadAll = False
+#!-------------------------------------------------------------------------
+#GROUP(%FormatPrimary)
+  #EMBED(%BeforePrimaryDisplay,'Relational Object Tree, Before Creating Display on Base File'),%ActiveTemplateInstance,MAP(%ActiveTemplateInstance,%ActiveTemplateinstanceDescription),NOINDENT,LEGACY
+  #IF(%TreeDisplay)                                                     #!If this level has a display string, use it.
+SELF.QRT.Display = %TreeDisplay                                         #<!Assign display string to property
+  #ELSE                                                                 #!else no display string
+SELF.QRT.Display = ''                                                   #<!Assign blank display string to property since it is not used here
+  #ENDIF                                                                #! End #IF(%TreeDisplay)
+  #EMBED(%AfterPrimaryDisplay,'Relational Object Tree, After Setting Display on Base File'),%ActiveTemplateInstance,MAP(%ActiveTemplateInstance,%ActiveTemplateinstanceDescription),NOINDENT,LEGACY
+  #IF(%ControlHasColor)                                                 #!If color is turned on
+    #IF(ITEMS(%PrimaryConditionalColors))                               #!If there are 1 or more conditions for color on primary file
+      #FOR(%PrimaryConditionalColors)                                   #!Loop through all conditions
+        #IF(INSTANCE(%PrimaryConditionalColors) = 1)                    #!If this is the first condition
+IF %PrimaryColorCondition                                               #<!If color condition is true 
+        #ELSE                                                           #!else do the other conditions
+ELSIF %PrimaryColorCondition                                            #<! else other color condition is true
+        #ENDIF                                                          #! End #IF(INSTANCE(%PrimaryConditionalColors) = 1)
+  SELF.QRT.NormalFG = %ConditionalPrimaryForegroundNormal               #<!Set conditional primary file normal foreground color
+  SELF.QRT.NormalBG = %ConditionalPrimaryBackgroundNormal               #<!Set conditional primary file normal background color
+  SELF.QRT.SelectedFG = %ConditionalPrimaryForegroundSelected           #<!Set conditional primary file selected foreground color
+  SELF.QRT.SelectedBG = %ConditionalPrimaryBackgroundSelected           #<!Set conditional primary file selected background color
+      #ENDFOR                                                           #! End #FOR(%PrimaryConditionalColors)
+ELSE                                                                    #<! else use defaults for colorization
+  SELF.QRT.NormalFG = %DefaultPrimaryForegroundNormal                   #<!Set default primary file normal foreground color                    
+  SELF.QRT.NormalBG = %DefaultPrimaryBackgroundNormal                   #<!Set default primary file normal background color
+  SELF.QRT.SelectedFG = %DefaultPrimaryForegroundSelected               #<!Set default primary file selected foreground color
+  SELF.QRT.SelectedBG = %DefaultPrimaryBackgroundSelected               #<!Set default primary file selected background color
+END                                                                     #<!End IF %PrimaryColorCondition
+    #ELSE                                                               #!else use default primary colors
+SELF.QRT.NormalFG = %DefaultPrimaryForegroundNormal                     #<!Set default primary file normal foreground color   
+SELF.QRT.NormalBG = %DefaultPrimaryBackgroundNormal                     #<!Set default primary file normal background color
+SELF.QRT.SelectedFG = %DefaultPrimaryForegroundSelected                 #<!Set default primary file selected foreground color
+SELF.QRT.SelectedBG = %DefaultPrimaryBackgroundSelected                 #<!Set default primary file selected background color
+    #ENDIF                                                              #! End #IF(ITEMS(%PrimaryConditionalColors)
+  #ENDIF                                                                #! End #IF(%ControlHasColor)
+  #IF(%ControlHasIcon)                                                  #! If icons are used here
+    #IF(ITEMS(%PrimaryConditionalIcons))                                #! and if there is 1 or more icon condition
+      #FOR(%PrimaryConditionalIcons)                                    #! for each condition
+        #IF(INSTANCE(%PrimaryConditionalIcons) = 1)                     #! is this the first condition? 
+IF %PrimaryIconCondition                                                #<!Set primary file icon condition
+        #ELSE                                                           #! else the other condition
+ELSIF %PrimaryIconCondition                                             #<! else the extra condition
+        #ENDIF                                                          #! End #IF(INSTANCE(%PrimaryConditionalIcons) = 1)
+        #FIX(%IconList,%PrimaryConditionalIcon)                         #!lock the icon to the primary conditional icon
+        #IF(%IconList)                                                  #!If the list is not empty
+          #CASE(%IconListType)                                          #!determine the icon type
+          #OF('Variable')                                               #!If a variable holds the type (internal)
+  SELF.QRT.Icon = %IconList                                             #<!Set icon to internal equate
+          #ELSE                                                         #!else not internal icon
+            #SET(%ValueConstruct,INSTANCE(%IconList))                   #!Get the current instance in the loop
+  SELF.QRT.Icon = %ValueConstruct                                       #<!Assign current icon to property
+          #ENDCASE                                                      #! End #CASE(%IconListType)
+        #ELSE                                                           #! else no icons
+  SELF.QRT.Icon = 0                                                     #<!Set icon number to no icon.
+        #ENDIF                                                          #! End #IF(%IconList)
+      #ENDFOR                                                           #! End #FOR(%PrimaryConditionalIcons)
+ELSE                                                                    #<! else no condition
+      #FIX(%IconList,%PrimaryDefaultIcon)                               #!Set primary file default icon
+      #IF(%IconList)                                                    #!If there is a primary file default icon
+        #CASE(%IconListType)                                            #!determine the icon type
+        #OF('Variable')                                                 #!If a variable holds the type (internal)
+  SELF.QRT.Icon = %IconList                                             #<!Set icon to internal equate
+        #ELSE                                                           #!else not internal icon
+          #SET(%ValueConstruct,INSTANCE(%IconList))                     #!Get the current instance in the loop
+  SELF.QRT.Icon = %ValueConstruct                                       #<!Assign current icon to property
+        #ENDCASE                                                        #! End #CASE(%IconListType)
+      #ELSE                                                             #! else no icons
+  SELF.QRT.Icon = 0                                                     #<!Set icon number to no icon.
+      #ENDIF                                                            #! End #IF(%IconList)
+END                                                                     #<! End IF %PrimaryIconCondition
+    #ELSE                                                               #!there are no conditional icons
+      #FIX(%IconList,%PrimaryDefaultIcon)                               #!lock the icon to the primary file default icon
+      #IF(%IconList)                                                    #!If the list is not empty
+        #CASE(%IconListType)                                            #!determine the icon type
+        #OF('Variable')                                                 #!If a variable holds the type (internal)
+SELF.QRT.Icon = %IconList                                               #<!Set icon to internal equate
+        #ELSE                                                           #!else not internal icon
+          #SET(%ValueConstruct,INSTANCE(%IconList))                     #!Get the current instance in the loop
+SELF.QRT.Icon = %ValueConstruct                                         #<!Assign current icon to property
+        #ENDCASE                                                        #! End #CASE(%IconListType)
+      #ELSE                                                             #! else no icons
+SELF.QRT.Icon = 0                                                       #<!Set icon number to no icon.
+      #ENDIF                                                            #! End #IF(%IconList)
+    #ENDIF                                                              #! End #IF(ITEMS(%PrimaryConditionalIcons))
+  #ENDIF                                                                #! End #IF(%ControlHasIcon)
+#EMBED(%BeforeAddingPrimaryToQueue,'Relational Object Tree, Before Adding Primary Record to Queue'),%ActiveTemplateInstance,MAP(%ActiveTemplateInstance,%ActiveTemplateinstanceDescription),NOINDENT,LEGACY
+#!-------------------------------------------------------------------------
+#GROUP(%FormatSecondary)
+#INSERT(%StandardFormula(ABC),'Format Tree - secondary files')
+#FIX(%File,%Primary)
+#FIX(%Secondary,%TreeLevelFile)
+#EMBED(%BeforeSecondaryDisplay,'Relational Object Tree, Before Creating Display on Secondary File'),%ActiveTemplateInstance,%Secondary,MAP(%ActiveTemplateInstance,%ActiveTemplateinstanceDescription),NOINDENT,LEGACY
+#IF(%TreeDisplay)
+SELF.QRT.Display = %TreeDisplay
+#ELSE
+SELF.QRT.Display = ''
+#ENDIF
+#EMBED(%AfterSecondaryDisplay,'Relational Object Tree, After Setting Display on Secondary File'),%ActiveTemplateInstance,%Secondary,MAP(%ActiveTemplateInstance,%ActiveTemplateinstanceDescription),MAP(%Secondary,' on ' & %Secondary),NOINDENT,LEGACY
+#FIX(%File,%TreeLevelFile)
+#FIX(%Relation,%TreeParentFile)
+#IF(%ControlHasColor)
+  #IF(ITEMS(%SecondaryConditionalColors))
+    #FOR(%SecondaryConditionalColors)
+      #IF(INSTANCE(%SecondaryConditionalColors) = 1)
+IF %SecondaryColorCondition
+      #ELSE
+ELSIF %SecondaryColorCondition
+      #ENDIF
+  SELF.QRT.NormalFG = %ConditionalSecondaryForegroundNormal
+  SELF.QRT.NormalBG = %ConditionalSecondaryBackgroundNormal
+  SELF.QRT.SelectedFG = %ConditionalSecondaryForegroundSelected
+  SELF.QRT.SelectedBG = %ConditionalSecondaryBackgroundSelected
+    #ENDFOR
+ELSE
+  SELF.QRT.NormalFG = %DefaultSecondaryForegroundNormal
+  SELF.QRT.NormalBG = %DefaultSecondaryBackgroundNormal
+  SELF.QRT.SelectedFG = %DefaultSecondaryForegroundSelected
+  SELF.QRT.SelectedBG = %DefaultSecondaryBackgroundSelected
+END
+  #ELSE
+SELF.QRT.NormalFG = %DefaultSecondaryForegroundNormal
+SELF.QRT.NormalBG = %DefaultSecondaryBackgroundNormal
+SELF.QRT.SelectedFG = %DefaultSecondaryForegroundSelected
+SELF.QRT.SelectedBG = %DefaultSecondaryBackgroundSelected
+  #ENDIF
+#ENDIF
+#IF(%ControlHasIcon)
+  #IF(ITEMS(%SecondaryConditionalIcons))
+    #FOR(%SecondaryConditionalIcons)
+      #IF(INSTANCE(%SecondaryConditionalIcons) = 1)
+IF %SecondaryIconCondition
+      #ELSE
+ELSIF %SecondaryIconCondition
+      #ENDIF
+      #FIX(%IconList,%SecondaryConditionalIcon)
+      #IF(%IconList)
+        #CASE(%IconListType)
+        #OF('Variable')
+  SELF.QRT.Icon = %IconList
+        #ELSE
+          #SET(%ValueConstruct,INSTANCE(%IconList))
+  SELF.QRT.Icon = %ValueConstruct
+        #ENDCASE
+      #ELSE
+  SELF.QRT.Icon = 0
+      #ENDIF
+    #ENDFOR
+ELSE
+    #FIX(%IconList,%SecondaryDefaultIcon)
+    #IF(%IconList)
+      #CASE(%IconListType)
+      #OF('Variable')
+  SELF.QRT.Icon = %IconList
+      #ELSE
+        #SET(%ValueConstruct,INSTANCE(%IconList))
+  SELF.QRT.Icon = %ValueConstruct
+      #ENDCASE
+    #ELSE
+  SELF.QRT.Icon = 0
+    #ENDIF
+END
+  #ELSE
+    #FIX(%IconList,%SecondaryDefaultIcon)
+    #IF(%IconList)
+      #CASE(%IconListType)
+      #OF('Variable')
+SELF.QRT.Icon = %IconList
+      #ELSE
+        #SET(%ValueConstruct,INSTANCE(%IconList))
+SELF.QRT.Icon = %ValueConstruct
+      #ENDCASE
+    #ELSE
+SELF.QRT.Icon = 0
+    #ENDIF
+  #ENDIF
+#ENDIF
+#EMBED(%BeforeAddingSecondaryToQueue,'Relational Object Tree, Before Adding Secondary Record to Queue'),%ActiveTemplateInstance,%Secondary,MAP(%ActiveTemplateInstance,%ActiveTemplateinstanceDescription),MAP(%Secondary,' on ' & %Secondary),NOINDENT,LEGACY
+#!-------------------------------------------------------------------------
+#GROUP(%AddMethods,%pMethodName,%pMethodPrototype),AUTO
+#DECLARE(%MethodsPresent)
+#DECLARE(%LastNewMethodsInstance)
+#SET(%MethodsPresent,0)
+#SET(%LastNewMethodsInstance,0)
+#FOR(%NewMethods)
+  #SET(%LastNewMethodsInstance,%NewMethods)
+  #IF(UPPER(CLIP(%NewMethodName))=UPPER(CLIP(%pMethodName)) AND UPPER(CLIP(%NewMethodPrototype))=UPPER(CLIP(%pMethodPrototype)))
+     #SET(%MethodsPresent,1)
+     #BREAK
+  #ENDIF
+#ENDFOR
+#IF(%MethodsPresent=0)
+  #ADD(%NewMethods,%LastNewMethodsInstance+1)
+  #SET(%NewMethodName,%pMethodName)
+  #SET(%NewMethodPrototype,%pMethodPrototype)
+#ENDIF
+#SET(%DeriveFromBaseClass,%True)
+#!----------------------------------------------------------------------

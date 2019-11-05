@@ -1,0 +1,8 @@
+-- Example 6 - Simple Overriding
+#noedit
+#system win32
+#model clarion dll
+#set RELEASE = on
+#pragma debug(vid=>off)
+#compile "OOP6.clw" /optimize(cpu=>386)
+#link "oop6.exe"

@@ -1,0 +1,8 @@
+-- Example 7 - Virtual Methods
+#noedit
+#system win32
+#model clarion dll
+#pragma debug(vid=>full)
+#pragma optimize(cpu=>386)
+#compile "OOP7.clw"
+#link "oop7.exe"
